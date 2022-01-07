@@ -17,8 +17,8 @@ var collectionSchema = mongoose.Schema({
 
     collection_id:{
         type: Number,
-        unique:[true],
-        required: [true]
+        unique:[true, 'Collection_id already exists. Please try a different collection_id'],
+        required: [true, 'Collection_id is required']
     },
     name: {
         type: String,
@@ -62,7 +62,7 @@ var collectionSchema = mongoose.Schema({
     },
     author_address: { 
         type: String, 
-        required:[true] 
+        required:[true, 'Author_address is required'] 
     },
     create_date: {
         type: Date,
