@@ -14,6 +14,12 @@ var config = require('./../../../helper/config')
 const Schema = mongoose.Schema;
 // Setup schema
 var collectionSchema = mongoose.Schema({
+
+    collection_id:{
+        type: Number,
+        unique:[true],
+        required: [true]
+    },
     name: {
         type: String,
         minlength: [3, 'Name must be 3 characters or more'],
@@ -54,7 +60,10 @@ var collectionSchema = mongoose.Schema({
         enum : [0,1],
         default: 1
     },
-    author_id: { type: Schema.Types.ObjectId, ref: 'users' },
+    author_address: { 
+        type: String, 
+        required:[true] 
+    },
     create_date: {
         type: Date,
         default: Date.now
