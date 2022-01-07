@@ -233,11 +233,19 @@ exports.list = function(req,res) {
     limit:10,    
     };  
     collections.paginate(query, options).then(function (result) {
-        res.status(200).json({
-            status: true,
-            message: "Collection retrieved successfully",
-            data: result
-        });
+        if(!result.docs[0]) {
+            res.status(404).send({
+                status: false,
+                message: "No collections available"
+            });
+        }
+        else {
+            res.status(200).json({
+                status: true,
+                message: "Collection retrieved successfully",
+                data: result
+            });
+        }
     }); 
 }
 
