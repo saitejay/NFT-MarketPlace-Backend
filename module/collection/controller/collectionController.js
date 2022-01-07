@@ -15,7 +15,9 @@ const { validationResult } = require('express-validator');
 var cp = require('child_process');
 var Web3 = require('web3');
 const config = require('../../../helper/config');
-var fs = require('fs')
+var fs = require('fs');
+const { collection } = require('../model/collectionModel');
+const { Console } = require('console');
 /*
 * This is the function which used to add collection in database
 */
@@ -30,89 +32,81 @@ exports.add = function(req,res) {
         return;
     }  
     var collection = new collections();
+    collection.collection_id = req.body.collection_id;
     collection.name = req.body.name;
     collection.description = req.body.description ? req.body.description : '';
     collection.royalties = req.body.royalties ? req.body.royalties : 0;
     collection.banner = req.body.banner ? req.body.banner : '';
     collection.image = req.body.image ? req.body.image : '';
     collection.status = 1;
-    collection.author_id = req.decoded.user_id;
-    userController.getUserInfoByID(req.decoded.user_id,function(err,user){
-        var symbol = req.body.name.replace(" ", "_")
-        var symbolsol = symbol+'.sol';
-        var symbolbin = symbol+'.bin';
-        var command = 'sh create.sh '+symbol + ' "' + req.body.name + '" ' +  symbolsol+' ' +  symbolbin+' ' +  user.private_key;
-        cp.exec(command, function(err, stdout, stderr) {
-            console.log('stderr ',stderr)
-            console.log('stdout ',stdout)
-            // handle err, stdout, stderr
-            if(err) {
-                res.status(400).json({
-                    status: false,
-                    message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
-                });
-                return
-            }
-            var address_array = stdout.toString().split('Contract address is: ').pop().replace(/\n|\r/g, " ").split(' ')
-            var contract_address = address_array[0];
-            collection.contract_address = contract_address
-            collection.contract_symbol = symbol;
-            collection.save(function (err ,collectionObj) {
-                if (err) {
-                    res.status(401).json({
-                        status: false,
-                        message: "Request failed",
-                        errors:err
-                    });
-                    return;
-                }
-                res.json({
-                    status: true,
-                    message: "Collection created successfully",
-                    result: collectionObj
-                });
+    collection.author_address = req.decoded.public_key;
+    collection.contract_address = req.body.collection_address;
+    collection.contract_symbol = req.body.token_name;
+
+    collection.save(function (err ,collectionObj) {
+        if (err) {
+            res.status(401).json({
+                status: false,
+                message: "Request failed",
+                errors:err
             });
+            return;
+        }
+        res.status(200).json({
+            status: true,
+            message: "Collection created successfully",
+            result: collectionObj
         });
-    })
+    });
 }
 
 /*
 * This is the function which used to update collection in database
 */
 exports.update = function(req,res) {
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        res.json({
+        res.status(400).json({
             status: false,
             message: "Request failed",
             errors:errors.array()
         });
         return;
-    }  
-    collections.findOne({_id:req.body.collection_id, author_id: req.decoded.user_id}, function (err, collection) {
-        if (err || !collection) {
-            res.json({
+    }
+    collections.findOne({collection_id:req.body.collection_id, author_address: req.decoded.public_key}, function (err, collection) {
+        if (err) {
+            res.status(400).json({  
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+            // return;
+        }
+        else if (!collection) {
+            res.status(404).json({  
                 status: false,
                 message: "Collection not found",
                 errors:err
-            });
-            return;
-        } else {
+            }); 
+        } 
+        else {
             collection.name = req.body.name ?  req.body.name : collection.name;
+            collection.description = req.body.description ? req.body.description : collection.description;
             collection.image = req.body.image ?  req.body.image : collection.image;
             collection.banner = req.body.banner ? req.body.banner : collection.banner;
             collection.royalties = req.body.royalties ? req.body.royalties : collection.royalties;
-            collection.description = req.body.description ? req.body.description : collection.description;
+            
             collection.save(function (err , collection) {
                 if (err) {
-                    res.json({
+                    res.status(400).json({
                         status: false,
                         message: "Request failed",
                         errors:err
                     });
                     return;
                 } else {
-                    res.json({
+                    res.status(200).json({
                         status: true,
                         message: "Collection updated successfully",
                         result: collection 
@@ -129,37 +123,44 @@ exports.update = function(req,res) {
 exports.delete = function(req,res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        res.json({
+        res.status(400).json({
             status: false,
             message: "Request failed",
             errors:errors.array()
         });
         return;
     }  
-    collections.findOne({_id:req.body.collection_id, author_id:req.decoded.user_id}, function (err, collection) {
-        if (err || !collection) {
-            res.json({
+    collections.findOne({collection_id:req.body.collection_id, author_address:req.decoded.public_key}, function (err, collection) {
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+            // return;
+        }
+        else if (!collection) {
+            res.status(404).json({  
                 status: false,
                 message: "Collection not found",
                 errors:err
-            });
-            return;
+            }); 
         } 
-        items.count({_id:req.body.collection_id},function(err,count) {
-            if(count == 0) {
-                collections.deleteOne({_id:req.body.collection_id},function(err) {
-                    res.json({
+
+        items.count({collection_id:req.body.collection_id},function(err,count) {
+            if(count != 0) {
+                collections.deleteOne({collection_id:req.body.collection_id},function(err) {
+                    res.status(200).json({
                         status: true,
                         message: "Collection deleted successfully"
                     }); 
                 })
             } else {
-                res.json({
+                res.status(404).json({
                     status: true,
-                    message: "Collection has items and you can't delete it"
+                    message: "Not found"
                 }); 
             }
-
         })
     });
 }
@@ -168,9 +169,9 @@ exports.delete = function(req,res) {
  *  This is the function which used to view collection
  */
 exports.view = function(req,res) {
-    collections.findOne({_id:req.query.collection_id}).exec( function (err, collection) {
+    collections.findOne({collection_id:req.query.collection_id}).exec( function (err, collection) {
         if (err) {
-            res.json({
+            res.status(400).json({
                 status: false,
                 message: "Request failed",
                 errors:"Collection not found"
@@ -178,14 +179,14 @@ exports.view = function(req,res) {
             return;
         }
         if(!collection) {
-            res.json({
+            res.status(404).json({
                 status: false,
                 message: "Request failed",
                 errors:"Collection not found"
             });
             return;
         } 
-        res.json({
+        res.status(200).json({
             status: true,
             message: "Collection info retrieved successfully",
             result: collection
