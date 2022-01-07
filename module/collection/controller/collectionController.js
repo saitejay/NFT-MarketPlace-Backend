@@ -157,7 +157,7 @@ exports.delete = function(req,res) {
                 })
             } else {
                 res.status(404).json({
-                    status: true,
+                    status: false,
                     message: "Not found"
                 }); 
             }
@@ -174,7 +174,7 @@ exports.view = function(req,res) {
             res.status(400).json({
                 status: false,
                 message: "Request failed",
-                errors:"Collection not found"
+                errors:"Database failure"
             });
             return;
         }
@@ -215,11 +215,11 @@ exports.list = function(req,res) {
        query = query.or(search)
     }    
     if(req.query.type == "my") {
-        if(req.decoded.user_id != null) {
-            query = query.where('author_id',req.decoded.user_id).sort('-create_date');
+        if(req.decoded.public_key != null) {
+            query = query.where('author_address',req.decoded.public_key).sort('-create_date');
         }
     } else if(req.query.type == "item") {
-        if(req.decoded.user_id != null) {
+        if(req.decoded.public_key != null) {
             query = query.sort('-item_count');
         }
     } else {
@@ -227,13 +227,13 @@ exports.list = function(req,res) {
     }
 
     var options = {
-    select:   'name description banner image royalties item_count',
+    select:   'name description banner image royalties item_count collection_id',
     page:page,
     offset:offset,
     limit:10,    
     };  
     collections.paginate(query, options).then(function (result) {
-        res.json({
+        res.status(200).json({
             status: true,
             message: "Collection retrieved successfully",
             data: result
