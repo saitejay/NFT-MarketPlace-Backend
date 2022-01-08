@@ -17,6 +17,7 @@ var Web3 = require('web3');
 const config = require('../../../helper/config');
 var fs = require('fs');
 const { collection } = require('../model/collectionModel');
+const userModel = require('../../user/model/userModel');
 const { Console } = require('console');
 /*
 * This is the function which used to add collection in database
@@ -249,6 +250,33 @@ exports.list = function(req,res) {
     }); 
 }
 
+// get all the  collections of the user
+
+exports.userCollections = function(req,  res)   {
+
+    collections.find({author_address: req.decoded.public_key}, function (err, collection) {
+        if (err) {
+            res.status(400).json({  
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+            // return;
+        }
+        else if (collection == "") {
+            res.status(404).json({  
+                status: false,
+                message: "Collection not found",
+                errors:err
+            }); 
+        } 
+        else{
+            res.send(collection)
+        }
+    });
+}
+
+
 /**
  * This is the function which used to list all items for admin
  */
@@ -284,6 +312,8 @@ exports.getAdminList = function(req,res) {
         });
     });
 }
+
+
 
 
 
