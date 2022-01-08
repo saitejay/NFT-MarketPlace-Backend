@@ -17,7 +17,6 @@ var Web3 = require('web3');
 const config = require('../../../helper/config');
 var fs = require('fs');
 const { collection } = require('../model/collectionModel');
-const userModel = require('../../user/model/userModel');
 const { Console } = require('console');
 /*
 * This is the function which used to add collection in database
