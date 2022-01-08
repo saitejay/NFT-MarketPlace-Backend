@@ -21,5 +21,7 @@ router.get('/fulllist',adminauth,collectionController.getAdminList)
 router.get('/list',optionalauth,collectionController.list)
 router.get('/detail',collectionController.view)
 router.delete('/delete',[check('collection_id').not().isEmpty(),auth],collectionController.delete)
+router.get('/usercollections',[auth],collectionController.userCollections)
+
 
 module.exports = router
