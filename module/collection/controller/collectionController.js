@@ -40,7 +40,7 @@ exports.add = function(req,res) {
     collection.image = req.body.image ? req.body.image : '';
     collection.status = 1;
     collection.author_address = req.decoded.public_key;
-    collection.contract_address = req.body.collection_address;
+    collection.contract_address = req.body.contract_address;
     collection.contract_symbol = req.body.token_name;
 
     collection.save(function (err ,collectionObj) {
