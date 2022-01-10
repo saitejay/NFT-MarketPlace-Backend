@@ -35,7 +35,9 @@ var collectionSchema = mongoose.Schema({
         type:String,
     },
     contract_address: {
-        type: String
+        type: String,
+        unique: [ true, 'contract_address already exists. Please try a different contract_address'],
+        required: [true, 'contract_address is required']
     },
     banner: {
         type: String,
