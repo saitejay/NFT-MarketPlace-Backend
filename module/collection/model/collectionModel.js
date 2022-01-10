@@ -33,6 +33,8 @@ var collectionSchema = mongoose.Schema({
     },   
     contract_symbol:{
         type:String,
+        unique: [ true, 'contract_symbol already exists. Please try a different contract_symbol'],
+        required: [true, 'contract_symbol is required']
     },
     contract_address: {
         type: String,
