@@ -40,12 +40,14 @@ exports.add = function(req,res) {
         return;
     }  
     var item = new items();
+    var c_id = req.body.collection_id;
     item.name = req.body.name;
     item.description = req.body.description;
     item.category_id = req.body.category_id;
-    item.collection_id = req.body.collection_id;
-    item.author_id = req.decoded.user_id;
-    item.current_owner = req.decoded.user_id;
+    item.collection_id = c_id;
+    // item.auther_id = req.decoded.user_id;
+    item.creator_address = req.decoded.public_key;
+    item.current_owner = req.decoded.public_key;
     item.price = req.body.price;
     item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : '';
     item.media = req.body.media ? req.body.media : '';
@@ -54,7 +56,7 @@ exports.add = function(req,res) {
     item.attributes = req.body.attributes ? req.body.attributes : [];
     item.levels = req.body.levels ? req.body.levels : [];
     item.stats = req.body.stats ? req.body.stats : [];
-    collections.findOne({_id:req.body.collection_id}, function (err, collection) {
+    collections.findOne({collection_id: c_id}, function (err, collection) {
         if (err || !collection) {
             res.status(404).json({
                 status: false,
@@ -78,11 +80,9 @@ exports.add = function(req,res) {
                     status: true,
                     message: "Item created successfully",
                     result: itemObj
-                });
+                }); 
             });
-
         })
-
     });
 }
 
