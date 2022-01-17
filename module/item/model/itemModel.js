@@ -24,7 +24,15 @@ var itemSchema = mongoose.Schema({
         maxlength: [255, "Name can't exceed 255 characters"],
         unique: [ true , 'Name already exists. Please try a different name'],
         required: [ true , 'Name is required'], 
-    },   
+    },
+    item_id: {
+        type: Number,
+        // default:0
+    },
+    collection_address: {
+        type: String,
+        default: '',
+    },
     description: {
         type: String,
         maxlength: [1000, "Description can't exceed 1000 characters"]
@@ -34,22 +42,26 @@ var itemSchema = mongoose.Schema({
     }, 
     media: {
         type: String,
+        unique: [ true , 'Media already exists. Please try a different media'],
+        required: [ true , 'Media is required'],
     },
     thumb: {
         type: String,
+        unique: [ true , 'Thumb already exists. Please try a different thumb'],
+        required: [ true , 'Thumb is required'],
     },
     has_offer: {
         type: Boolean,
         default: false
     },
     attributes: {
-        type: [attributeSchema],
+        type: String,
     },
     levels: {
-        type: [rangeSchema],
+        type: String,
     },
     stats: {
-        type: [rangeSchema],
+        type: String,
     },
     unlock_content_url: {
         type: String,
@@ -68,13 +80,29 @@ var itemSchema = mongoose.Schema({
         default:0
     },
     token_id:{
-        type: String,
-        default:""
+        type: Number,
+        default:0
     },
-    category_id: { type: Schema.Types.ObjectId, ref: 'category' },
-    collection_id: { type: Schema.Types.ObjectId, ref: 'collection' },
-    current_owner: { type: Schema.Types.ObjectId, ref: 'users' },
-    author_id: { type: Schema.Types.ObjectId, ref: 'users' },
+    category_id: { 
+        type: Number, 
+        ref: 'category',
+        required: [ true, 'Category_id is required'],
+    },
+    collection_id: { 
+        type: Number, 
+        // ref: 'collection',
+        required: [ true , 'Collection_id is required'],
+    },
+    current_owner: { 
+        type: String, 
+        // ref: 'users',
+        required: [ true , 'Current_owner is required'],
+    },
+    creator_address: { 
+        type: String, 
+        // ref: 'users',
+        required: [ true , 'Creator_address is required'],
+    },
     status:{
         type: String,
         enum : ['active','inactive'],
