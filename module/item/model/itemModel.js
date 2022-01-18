@@ -18,6 +18,7 @@ const attributeSchema = new Schema({ name: String, type:String });
 const rangeSchema = new Schema({ name: String, value:Number, valueof: Number });
 
 var itemSchema = mongoose.Schema({
+    
     name: {
         type: String,
         minlength: [3, 'Name must be 3 characters or more'],
@@ -27,7 +28,7 @@ var itemSchema = mongoose.Schema({
     },
     item_id: {
         type: Number,
-        // default:0
+        default:0
     },
     collection_address: {
         type: String,
@@ -54,18 +55,38 @@ var itemSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-    attributes: {
-        type: String,
-    },
-    levels: {
-        type: String,
-    },
-    stats: {
-        type: String,
-    },
+    attributes: [{
+        type: {
+            type: String
+        },
+        name:{
+            type: String
+        }
+       }],
+    levels: [{
+        name: {
+            type: String
+        },
+        value: {
+            type: Number
+        },
+        valueof: {
+            type: Number
+        }
+    }],
+    stats: [{
+        name: {
+            type: String
+        },
+        value: {
+            type: Number
+        },
+        valueof: {
+            type: Number
+        }
+    }],
     unlock_content_url: {
-        type: String,
-        default:""
+        type: Boolean,
     },
     view_count: {
         type: Number,
