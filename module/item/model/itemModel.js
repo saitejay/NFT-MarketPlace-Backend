@@ -40,6 +40,7 @@ var itemSchema = mongoose.Schema({
     },   
     external_link: {
         type: String,
+        required: [ true , 'external_link is required']
     }, 
     media: {
         type: String,
@@ -106,11 +107,11 @@ var itemSchema = mongoose.Schema({
         default:0
     },
     category_id: { 
-        type: Number, 
+        type: Schema.Types.ObjectId,
         ref: 'category',
         required: [ true, 'Category_id is required'],
     },
-    collection_id: { 
+    collection_id: {
         type: Number, 
         // ref: 'collection',
         required: [ true , 'Collection_id is required'],
