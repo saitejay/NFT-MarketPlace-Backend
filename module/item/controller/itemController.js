@@ -49,7 +49,7 @@ exports.add = function(req,res) {
     item.creator_address = req.decoded.public_key;
     item.current_owner = req.decoded.public_key;
     item.price = req.body.price;
-    item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : '';
+    item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : Boolean;
     item.media = req.body.media ? req.body.media : '';
     item.thumb = req.body.thumb ? req.body.thumb : '';
     item.external_link = req.body.external_link ? req.body.external_link : '';
@@ -65,6 +65,7 @@ exports.add = function(req,res) {
             });
             return;
         }
+        item.collection_address = collection.collection_address;
         item.save(function (err ,itemObj) {
             if (err) {
                 res.status(400).json({
