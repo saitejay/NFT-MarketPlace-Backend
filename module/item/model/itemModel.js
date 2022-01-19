@@ -32,7 +32,7 @@ var itemSchema = mongoose.Schema({
     },
     collection_address: {
         type: String,
-        default: '',
+        required: [ true , 'Collection_address is required'], 
     },
     description: {
         type: String,
