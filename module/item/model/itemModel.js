@@ -87,6 +87,7 @@ var itemSchema = mongoose.Schema({
     }],
     unlock_content_url: {
         type: Boolean,
+        required: [ true, 'unlock_content_url is required'],
     },
     view_count: {
         type: Number,
