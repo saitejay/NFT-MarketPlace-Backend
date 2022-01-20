@@ -116,6 +116,11 @@ var itemSchema = mongoose.Schema({
         // ref: 'collection',
         required: [ true , 'Collection_id is required'],
     },
+    collection_keyword: {
+        type: String, 
+        // ref: 'collection',
+        required: [ true , 'Collection_keyword is required'],
+    },
     current_owner: { 
         type: String, 
         // ref: 'users',
