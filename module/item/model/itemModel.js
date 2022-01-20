@@ -113,12 +113,14 @@ var itemSchema = mongoose.Schema({
     },
     collection_id: {
         type: Number, 
+        unique: [ true , 'collection_id already exists. Please try a different collection_id'],
         // ref: 'collection',
         required: [ true , 'Collection_id is required'],
     },
     collection_keyword: {
-        type: String, 
+        type: String,
         // ref: 'collection',
+        unique: [ true , 'collection_keyword already exists. Please try a different collection_keyword'],
         required: [ true , 'Collection_keyword is required'],
     },
     current_owner: { 
