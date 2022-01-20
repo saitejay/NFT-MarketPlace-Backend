@@ -33,7 +33,10 @@ exports.add = function(req,res) {
     }  
     var collection = new collections();
     collection.collection_id = req.body.collection_id;
-    collection.name = req.body.name;
+    let name = req.body.name;
+    let keyword = name.toLowerCase().split(' ').join('-');
+    collection.collection_keyword = keyword;
+    collection.name = name;
     collection.description = req.body.description ? req.body.description : '';
     collection.royalties = req.body.royalties ? req.body.royalties : 0;
     collection.banner = req.body.banner ? req.body.banner : '';
@@ -74,7 +77,7 @@ exports.update = function(req,res) {
         });
         return;
     }
-    collections.findOne({collection_id:req.body.collection_id, author_address: req.decoded.public_key}, function (err, collection) {
+    collections.findOne({collection_keyword:req.body.collection_keyword, author_address: req.decoded.public_key}, function (err, collection) {
         if (err) {
             res.status(400).json({  
                 status: false,
@@ -91,7 +94,12 @@ exports.update = function(req,res) {
             }); 
         } 
         else {
-            collection.name = req.body.name ?  req.body.name : collection.name;
+            if (req.body.name) {
+                collection.name = req.body.name;
+                let name = req.body.name;
+                let keyword = name.toLowerCase().split(' ').join('-');
+                collection.collection_keyword = keyword;
+            }
             collection.description = req.body.description ? req.body.description : collection.description;
             collection.image = req.body.image ?  req.body.image : collection.image;
             collection.banner = req.body.banner ? req.body.banner : collection.banner;
@@ -130,7 +138,7 @@ exports.delete = function(req,res) {
         });
         return;
     }  
-    collections.findOne({collection_id:req.body.collection_id, author_address:req.decoded.public_key}, function (err, collection) {
+    collections.findOne({collection_keyword:req.body.collection_keyword, author_address:req.decoded.public_key}, function (err, collection) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -146,22 +154,58 @@ exports.delete = function(req,res) {
                 errors:err
             }); 
         } 
-
-        items.count({collection_id:req.body.collection_id},function(err,count) {
-            if(count != 0) {
-                collections.deleteOne({collection_id:req.body.collection_id},function(err) {
-                    res.status(200).json({
-                        status: true,
-                        message: "Collection deleted successfully"
+        else{
+            items.countDocuments({collection_keyword: req.body.collection_keyword},function(err,count) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                } else if(count != 0) {
+                    items.deleteMany({collection_keyword: req.body.collection_keyword}, function(err, deleteCount) {
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors:err
+                            });
+                        } else {
+                            collections.deleteOne({collection_keyword:req.body.collection_keyword}, function(err) {
+                                if (err) {
+                                    res.status(400).json({
+                                        status: false,
+                                        message: "Request failed",
+                                        errors:err
+                                    }); 
+                                } else {
+                                    res.json({
+                                        status: true,
+                                        message: "Collection deleted successfully"
+                                    }); 
+                                }
+                            })
+                        }
+                    });
+                    
+                } else {
+                    collections.deleteOne({collection_keyword:req.body.collection_keyword},function(err) {
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors:err
+                            }); 
+                        } else {
+                            res.json({
+                                status: true,
+                                message: "Collection deleted successfully"
+                            }); 
+                        } 
                     }); 
-                })
-            } else {
-                res.status(404).json({
-                    status: false,
-                    message: "Not found"
-                }); 
-            }
-        })
+                }
+            })
+        }
     });
 }
 
@@ -169,7 +213,7 @@ exports.delete = function(req,res) {
  *  This is the function which used to view collection
  */
 exports.view = function(req,res) {
-    collections.findOne({collection_id:req.query.collection_id}).exec( function (err, collection) {
+    collections.findOne({collection_keyword:req.query.collection_keyword}).exec( function (err, collection) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -227,7 +271,7 @@ exports.list = function(req,res) {
     }
 
     var options = {
-    select:   'name description banner image royalties item_count collection_id author_address collection_address contract_symbol',
+    select:   'name description banner image royalties item_count collection_id collection_keyword author_address collection_address contract_symbol',
     page:page,
     offset:offset,
     limit:10,    
