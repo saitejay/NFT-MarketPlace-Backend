@@ -217,13 +217,12 @@ exports.list = function(req,res) {
         }] }
        query = query.or(search)
     }    
-    if(req.query.type == "mycollection" && req.decoded.user_id != null) {
-        query = query.where('collection_id',req.query.collection_id);
-        query = query.sort('-create_date')
-    } else if(req.query.type == "view" && req.decoded.user_id != null) {
+    if(req.query.type == "mycollection" && req.decoded.public_key != null) {
+        query = query.where('collection_keyword',req.query.collection_keyword).sort('-create_date')
+    } else if(req.query.type == "view" && req.decoded.public_key != null) {
         query = query.where('_id',req.query.item_id);
     } else {
-        if(req.query.user && req.decoded.user_id != null) {
+        if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
             } else {
                 query = query.where('status','active');
@@ -234,15 +233,15 @@ exports.list = function(req,res) {
         }
         
         if(req.query.type == "my") {
-            query = query.where('author_id',req.query.user_id).sort('-create_date');
+            query = query.where('creator_address',req.query.user_address).sort('-create_date');
         }else if(req.query.type == "collected") {
-            query = query.where('current_owner',req.query.user_id).where("author_id",{"$ne":req.query.user_id}).sort('-create_date');
+            query = query.where('current_owner',req.query.user_address).where("creator_address",{"$ne":req.query.user_address}).sort('-create_date');
         } else if(req.query.type == "view") { 
-            query = query.where('_id',req.query.item_id);
+            query = query.where('_id',req.query._id);
         } else if(req.query.type == "offer") { 
             query = query.where('has_offer',true);
-        } else if(req.query.type == "collection") { 
-            query = query.where('collection_id',req.query.collection_id);
+        } else if(req.query.type == "collection") {
+            query = query.where('collection_keyword',req.query.collection_keyword);
         } else if(req.query.type == "category") { 
             query = query.where('category_id',req.query.category_id);
         } else if (req.query.type == "price") {
@@ -251,7 +250,7 @@ exports.list = function(req,res) {
             query = query.sort('-view_count')
         } else if(req.query.type == "mostliked") {
             query = query.sort('-like_count')
-        } else {
+        }else {
             query = query.sort('-create_date')
         }
     }
@@ -264,7 +263,7 @@ exports.list = function(req,res) {
             limit:10,    
         }; 
     } else {
-        query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
+        query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
         options = {
             page:page,
             offset:offset,
@@ -275,7 +274,14 @@ exports.list = function(req,res) {
  
    
     items.paginate(query, options).then(function (result) {
-        if(req.query.type != "view") { 
+        if(result.docs.length == 0){
+            res.status(404).json({
+                status: "failed",
+                message: "No items found"
+            });
+        }
+        // console.log();
+        else if(req.query.type != "view") { 
             res.json({
                 status: true,
                 message: "Item retrieved successfully",
@@ -284,8 +290,8 @@ exports.list = function(req,res) {
             });
         } else {
             var is_liked = 0;
-            if(req.decoded.user_id != null) {
-                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.user_id}, function (err, favourite) {
+            if(req.decoded.public_key != null) {
+                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.public_key}, function (err, favourite) {
                   if(favourite) {
                       is_liked = 1
                   }
