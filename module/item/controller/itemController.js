@@ -218,7 +218,7 @@ exports.list = function(req,res) {
        query = query.or(search)
     }    
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
-        query = query.where('collection_keyword',req.query.collection_keyword).sort('-create_date')
+            query = query.where({'collection_keyword':req.query.collection_keyword, 'status': "active"}).sort('-create_date')
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
         query = query.where('_id',req.query.item_id);
     } else {
