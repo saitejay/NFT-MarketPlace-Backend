@@ -132,9 +132,9 @@ var itemSchema = mongoose.Schema({
         required: [ true , 'Creator_address is required'],
     },
     status:{
-        type: String,
-        enum : ['active','inactive'],
-        default: 'inactive'
+        type: Boolean,
+        // enum : ['active','inactive'],
+        default: false
     },
     minted_date: {
         type: Date,
