@@ -49,8 +49,10 @@ try {
       config.db.password +
       "@cluster0.ll6t4.mongodb.net/" +
       config.db.name,
-    { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true }
+    { keepAlive: true, useNewUrlParser: true, useCreateIndex: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false }
   );
+
+
 
   var db = mongoose.connection;
   // Added check for DB connection
