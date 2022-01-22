@@ -204,6 +204,8 @@ exports.list = function(req,res) {
     var keyword = req.query.keyword ? req.query.keyword : ''; 
     keyword = keyword.replace("+"," ");     
     var page = req.query.page ? req.query.page : '1';  
+    var query_0  = items.find();
+    var query_1  = items.find();
     var query  = items.find();
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
     if ( keyword != '' ) {
@@ -218,7 +220,17 @@ exports.list = function(req,res) {
        query = query.or(search)
     }    
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
-            query = query.where({'collection_keyword':req.query.collection_keyword, 'status': "active"}).sort('-create_date')
+        
+            query = query.where({ 
+                
+                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'active'},{
+                         $and:[{'current_owner':req.decoded.public_key, 'status': 'inactive'}] 
+                        }]
+                    }]
+                }                
+            ).sort('-create_date') 
+        
+
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
         query = query.where('_id',req.query.item_id);
     } else {
