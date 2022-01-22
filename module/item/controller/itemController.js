@@ -272,7 +272,7 @@ exports.list = function(req,res) {
             select:  'name description thumb like_count create_date status price attributes levels stats media category_id',
             page:page,
             offset:offset,
-            limit:10,
+            limit:10,    
         }; 
     } else {
         query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
@@ -461,30 +461,17 @@ exports.publish = function(req,res) {
         });
         return;
     } 
-    items.find({_id:req.body._id, creator_address: req.decoded.public_key, status:true}).populate('collection_id').exec(function (err, item) {
-        if (err || !item) {
+    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status:false}, 
+                            {'$set': {item_id: req.body.item_id, token_id : req.body.token_id, minted_date: new Date(), status: true}}, (err, item) => {
+        if (err) {
             res.status(400).json({
                 status: false,
                 message: "request failed",
                 errors:err
             });
             return;
-        }   
+        }
         userController.getUserInfoByID(req.decoded.public_key,function(err,user){
-            
-            item.item_id = req.body.item_id;
-            item.token_id = req.body.token_id;
-            item.minted_date = new Date();
-            item.status = "active";
-            item.save(function (err ,itemObj) {
-                if (err) {
-                    res.status(401).json({
-                        status: false,
-                        message: "Request failed",
-                        errors:err
-                    });
-                    return;
-                }
                 var history = new histories();
                 history.item_id = req.body.item_id;
                 history.collection_id = item.collection_id;
@@ -498,6 +485,7 @@ exports.publish = function(req,res) {
                     price.item_id = req.body.item_id;
                     price.price = item.price;
                     price.user_address = user.public_key;
+                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
                     price.save(function (err ,priceObj) {
                         res.json({
                             status: true,
