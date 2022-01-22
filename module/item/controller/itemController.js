@@ -269,10 +269,10 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") { 
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id',
             page:page,
             offset:offset,
-            limit:10,    
+            limit:10,
         }; 
     } else {
         query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
