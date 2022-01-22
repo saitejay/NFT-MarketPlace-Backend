@@ -106,7 +106,7 @@ exports.update = function(req,res) {
     }  
     // console.log("item id ",req.body.item_id);
     // console.log("creator_address ",req.decoded.public_key);
-    items.findOne({_id:req.body.item_id, creator_address: req.decoded.public_key, status:"inactive"}, function (err, item) {
+    items.findOne({_id:req.body.item_id, creator_address: req.decoded.public_key, status: false}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -165,7 +165,7 @@ exports.delete = function(req,res) {
         });
         return;
     }
-    items.findOne({_id:req.body.item_id, creator_address:req.decoded.public_key, status:"inactive"}, function (err, item) {
+    items.findOne({_id:req.body.item_id, creator_address:req.decoded.public_key, status: false}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -223,8 +223,8 @@ exports.list = function(req,res) {
         
             query = query.where({ 
                 
-                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'active'},{
-                         $and:[{'current_owner':req.decoded.public_key, 'status': 'inactive'}] 
+                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': true},{
+                         $and:[{'current_owner':req.decoded.public_key, 'status': false}] 
                         }]
                     }]
                 }                
@@ -237,11 +237,11 @@ exports.list = function(req,res) {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
             } else {
-                query = query.where('status','active');
+                query = query.where('status', true);
             }
             
         } else {
-            query = query.where('status','active');
+            query = query.where('status', true);
         }
         
         if(req.query.type == "my") {
@@ -269,7 +269,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") { 
         options = {
-            select:  'name description thumb like_count create_date status price',
+            select:  'name description thumb like_count create_date status price attributes levels stats media',
             page:page,
             offset:offset,
             limit:10,    
@@ -329,6 +329,122 @@ exports.list = function(req,res) {
 }
 
 
+/*
+* This is the function which used to purchase item in ethereum network
+*/
+// exports.purchase = function(req,res) {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         res.json({
+//             status: false,
+//             message: "Request failed",
+//             errors:errors.array()
+//         });
+//         return;
+//     } 
+//     items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
+//         if (err || !item) {
+//             res.json({
+//                 status: false,
+//                 message: "Item not found",
+//                 errors:err
+//             });
+//             return;
+//         }
+//         userController.getUserInfoByID(item.current_owner,function(err,receiver){
+//             userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
+//                 this.checkbalance(sender.public_key,item,function(has_balance) {
+//                     if(!has_balance) {
+//                         res.json({
+//                             status: false,
+//                             message: "Not enough balance to proceed purchase",
+//                             errors:err
+//                         });
+//                         return;
+//                     }
+//                     this.transferAdminComission(item, function(error, comission){
+//                         this.transferBalance(sender,receiver, item, comission, function(is_transferred){
+//                             if(!has_balance) {
+//                                 res.json({
+//                                     status: false,
+//                                     message: "Unable to transfer ETH",
+//                                     errors:err
+//                                 });
+//                                 return;
+//                             }
+//                             var symbolabi = item.collection_id.contract_symbol+'.abi';
+//                             var command = 'sh transaction.sh '+receiver.public_key +' '+sender.public_key +' '+item.token_id + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  receiver.private_key
+//                             cp.exec(command, function(err, stdout, stderr) {
+//                                 console.log('stderr ',stderr)
+//                                 console.log('stdout ',stdout)
+//                                 // handle err, stdout, stderr
+//                                 if(err) {
+//                                     console.log("error is ",err)
+//                                     res.json({
+//                                         status: false,
+//                                         message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
+//                                     });
+//                                     return
+//                                 }
+                    
+//                                 var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
+//                                 var transaction_hash = t_array[0].replace('Waiting','')
+                    
+//                                 var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
+//                                 var status_block = status_array[0]
+//                                 if(status_block == "Failed") {
+//                                     res.json({
+//                                         status:false,
+//                                         message:"NFT item transferred failed in network",
+//                                         data: {
+//                                             transaction_hash:transaction_hash,
+//                                         }
+//                                     })
+//                                 } else {
+//                                     item.current_owner = req.decoded.user_id;
+//                                     collections.findOne({_id:item.collection_id._id},function(err, collection){
+//                                         collection.volume_traded = collection.volume_traded + item.price;
+//                                         collection.save(function (err ,collectionsaveObj) {
+                                   
+                                    
+//                                     item.save(function (err ,itemObj) {
+//                                         var history = new histories();
+//                                         history.item_id = item._id;
+//                                         history.collection_id = item.collection_id._id
+//                                         history.from_id = receiver._id;
+//                                         history.to_id = sender._id
+//                                         history.transaction_hash = transaction_hash
+//                                         history.history_type = "transfer";
+//                                         history.price = item.price;
+//                                         history.save(function (err ,historyObj) {
+//                                             var price = new prices();
+//                                             price.item_id = item._id;
+//                                             price.price = item.price;
+//                                             price.user_id = sender._id
+//                                             price.save(function (err ,priceObj) {
+//                                                 res.json({
+//                                                     status: true,
+//                                                     message: "Item Transfer successfully",
+//                                                     result: itemObj
+//                                                 });
+//                                             });
+    
+//                                         });
+//                                     });
+//                                     })
+//                                     });
+//                                 }
+//                             });
+    
+//                         });
+//                     })
+
+//                 })
+//             })
+//         });
+//     });
+// }
+
 
 
 
@@ -345,7 +461,7 @@ exports.publish = function(req,res) {
         });
         return;
     } 
-    items.find({_id:req.body._id, creator_address: req.decoded.public_key, status:"inactive"}).populate('collection_id').exec(function (err, item) {
+    items.find({_id:req.body._id, creator_address: req.decoded.public_key, status:true}).populate('collection_id').exec(function (err, item) {
         if (err || !item) {
             res.status(400).json({
                 status: false,
@@ -355,6 +471,7 @@ exports.publish = function(req,res) {
             return;
         }   
         userController.getUserInfoByID(req.decoded.public_key,function(err,user){
+            
             item.item_id = req.body.item_id;
             item.token_id = req.body.token_id;
             item.minted_date = new Date();
