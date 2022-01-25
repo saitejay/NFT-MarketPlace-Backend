@@ -25,6 +25,7 @@ var Web3 = require('web3');
 var web3 = new Web3(new Web3.providers.HttpProvider(config.eth_http));
 var cp = require('child_process');
 var mailer = require('./../../common/controller/mailController'); 
+const { find } = require('../model/itemModel');
 // const { Collection } = require('mongoose');
 // const { collection } = require('../model/itemModel');
 // require('util').inspect.defaultOptions.depth = null
@@ -43,7 +44,7 @@ exports.add = function(req,res) {
         return;
     }  
     var item = new items();
-    
+
     item.name = req.body.name;
     item.description = req.body.description;
     item.category_id = req.body.category_id;
@@ -70,7 +71,7 @@ exports.add = function(req,res) {
             return;
         }
         item.collection_address = collection.collection_address;
-        item.save(function (err ,itemObj) {
+        users.findOne({public_key: req.decoded.public_key}, function(err, userdetails){
             if (err) {
                 res.status(400).json({
                     status: false,
@@ -79,15 +80,27 @@ exports.add = function(req,res) {
                 });
                 return;
             }
-            collection.item_count = collection.item_count + 1;
-            collection.save(function (err ,collectionObj) {
-                res.json({
-                    status: true,
-                    message: "Item created successfully",
-                    result: itemObj
-                }); 
-            });
-        })
+            item.creator_image= userdetails.profile_image;
+            item.owner_image= userdetails.profile_image;
+            item.save(function (err ,itemObj) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                    return;
+                }
+                collection.item_count = collection.item_count + 1;
+                collection.save(function (err ,collectionObj) {
+                    res.json({
+                        status: true,
+                        message: "Item created successfully",
+                        result: itemObj
+                    });
+                });
+            })
+        });
     });
 }
 /*
@@ -232,7 +245,7 @@ exports.list = function(req,res) {
         
 
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
-        query = query.where('_id',req.query.item_id);
+        query = query.where('_id',req.query._id);
     } else {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
@@ -267,9 +280,9 @@ exports.list = function(req,res) {
         }
     }
     var options;
-    if(req.query.type != "view") { 
+    if(req.query.type != "view") {
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image owner_image',
             page:page,
             offset:offset,
             limit:10,    
@@ -481,12 +494,14 @@ exports.publish = function(req,res) {
                 history.price = item.price;
                 history.history_type = "minted";
                 history.save(function (err ,historyObj) {
+                    console.log(historyObj);
                     var price = new prices();
                     price.item_id = req.body.item_id;
                     price.price = item.price;
                     price.user_address = user.public_key;
                     items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
                     price.save(function (err ,priceObj) {
+                        console.log(priceObj);
                         res.json({
                             status: true,
                             message: "Item published successfully",
