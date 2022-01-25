@@ -131,6 +131,15 @@ var itemSchema = mongoose.Schema({
         // ref: 'users',
         required: [ true , 'Creator_address is required'],
     },
+    owner_image:{
+        type: String, 
+        // ref: 'users',
+        required: [ true , 'Owner_image is required'],
+    },
+    creator_image:{
+        type:String,
+        required: [ true , 'creator_image is required']
+    },
     status:{
         type: Boolean,
         // enum : ['active','inactive'],
