@@ -106,7 +106,7 @@ exports.update = function(req,res) {
     }  
     // console.log("item id ",req.body.item_id);
     // console.log("creator_address ",req.decoded.public_key);
-    items.findOne({_id:req.body.item_id, creator_address: req.decoded.public_key, status: false}, function (err, item) {
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: false}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -165,7 +165,7 @@ exports.delete = function(req,res) {
         });
         return;
     }
-    items.findOne({_id:req.body.item_id, creator_address:req.decoded.public_key, status: false}, function (err, item) {
+    items.findOne({_id:req.body._id, creator_address:req.decoded.public_key, status: false}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -269,7 +269,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") { 
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url',
             page:page,
             offset:offset,
             limit:10,    
