@@ -14,13 +14,13 @@ var config = require('./../../../helper/config')
 const Schema = mongoose.Schema;
 
 var priceSchema = mongoose.Schema({
-    item_id: { type: Schema.Types.ObjectId, ref: 'item' },
+    item_id: { type: Number },
     price: {
         type: Number,
         default:0
     },
-    user_id: {
-        type: Schema.Types.ObjectId, ref: 'users'
+    user_address: {
+        type: String
     },
     created_date: {
         type: Date,

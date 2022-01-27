@@ -20,6 +20,7 @@ var moment = require("moment");
 var mailer = require("./../../common/controller/mailController");
 var media = require("./../../media/controller/mediaController");
 var cp = require("child_process");
+const itemModel = require("../../item/model/itemModel");
 /*
  *  This is the function which used to retreive user list
  */
@@ -919,59 +920,66 @@ exports.update = function(req, res) {
                 });
                 return;
             }
+            
+
             user.display_name = req.body.display_name ?
                 req.body.display_name :
                 user.display_name;
-            user.profile_image = req.body.profile_image ?
-                req.body.profile_image :
-                user.profile_image;
-            user.profile_cover = req.body.profile_cover ?
-                req.body.profile_cover :
-                user.profile_cover;
-            user.email = req.body.email ? req.body.email : user.email;
-            // user.username = req.body.username ? req.body.username : user.username;
-            user.bio = req.body.bio ? req.body.bio : user.bio;
-            user.facebook_username = req.body.facebook_username ?
-                req.body.facebook_username :
-                user.facebook_username;
-            user.twitter_username = req.body.twitter_username ?
-                req.body.twitter_username :
-                user.twitter_username;
-            user.instagram_username = req.body.instagram_username ?
-                req.body.instagram_username :
-                user.instagram_username;
 
-            user.modified_date = moment().format();
-            // save the user and check for errors
-            user.save(function(err, user) {
-                if (err) {
-                    res.status(400).json({
-                        status: false,
-                        message: "Request failed",
-                        errors: err,
+            if (req.body.profile_image) {
+                user.profile_image = req.body.profile_image;
+                itemModel.updateMany({creator_address: req.decoded.public_key}, {creator_image: req.body.profile_image}, function(error, itemObj){
+                    itemModel.updateMany({current_owner: req.decoded.public_key}, {owner_image: req.body.profile_image}, function(err, itemObj) {
+                        user.profile_cover = req.body.profile_cover ?
+                            req.body.profile_cover :
+                            user.profile_cover;
+                        user.email = req.body.email ? req.body.email : user.email;
+                        // user.username = req.body.username ? req.body.username : user.username;
+                        user.bio = req.body.bio ? req.body.bio : user.bio;
+                        user.facebook_username = req.body.facebook_username ?
+                            req.body.facebook_username :
+                            user.facebook_username;
+                        user.twitter_username = req.body.twitter_username ?
+                            req.body.twitter_username :
+                            user.twitter_username;
+                        user.instagram_username = req.body.instagram_username ?
+                            req.body.instagram_username :
+                            user.instagram_username;
+
+                        user.modified_date = moment().format();
+                        // save the user and check for errors
+                        user.save(function(err, user) {
+                            if (err) {
+                                res.status(400).json({
+                                    status: false,
+                                    message: "Request failed",
+                                    errors: err,
+                                });
+                                return;
+                            }
+
+                            let token = jwt.sign({
+                                    public_key: user.public_key,
+                                    username: user.username,
+                                    email: user.email,
+                                    display_name: user.display_name,
+                                    // profile_image: user.profile_image ? user.profile_image : "",
+                                    status: user.status,
+                                    role: user.role,
+                                },
+                                config.secret_key, {
+                                    expiresIn: "24h", // expires in 24 hours
+                                }
+                            );
+                            res.json({
+                                status: true,
+                                token: token,
+                                message: "profile updated successfully",
+                            });
+                        });
                     });
-                    return;
-                }
-
-                let token = jwt.sign({
-                        public_key: user.public_key,
-                        username: user.username,
-                        email: user.email,
-                        display_name: user.display_name,
-                        // profile_image: user.profile_image ? user.profile_image : "",
-                        status: user.status,
-                        role: user.role,
-                    },
-                    config.secret_key, {
-                        expiresIn: "24h", // expires in 24 hours
-                    }
-                );
-                res.json({
-                    status: true,
-                    token: token,
-                    message: "profile updated successfully",
                 });
-            });
+            }    
         });
     });
 };

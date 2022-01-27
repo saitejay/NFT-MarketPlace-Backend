@@ -89,7 +89,7 @@ exports.getAdminList  = function(req,res) {
 exports.add  = function(req,res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        res.json({
+        res.status(400).json({
             status: false,
             message: "Request failed",
             errors:errors.array()
@@ -102,14 +102,14 @@ exports.add  = function(req,res) {
     category.status = req.body.status;
     category.save(function (err , categoryObj) {
         if (err) {
-            res.json({
+            res.status(400).json({
                 status: false,
                 message: "Request failed",
                 errors:err
             });
             return;
         }
-        res.json({
+        res.status(200).json({
             status: true,
             message: "Category created successfully",
             result: categoryObj

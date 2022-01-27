@@ -14,12 +14,12 @@ var config = require('./../../../helper/config')
 const Schema = mongoose.Schema;
 
 var historySchema = mongoose.Schema({
-    item_id: { type: Schema.Types.ObjectId, ref: 'item' },
-    collection_id: { type: Schema.Types.ObjectId, ref: 'collection' },
-    from_id: { type: Schema.Types.ObjectId, ref: 'users' },
-    to_id: { type: Schema.Types.ObjectId, ref: 'users' },
+    item_id: { type: Number },
+    collection_id: { type: Number },
+    from_address: { type: String },
+    to_address: { type: String },
     transaction_hash: {
-        type:String
+        type: String
     },
     price: {
         type:Number

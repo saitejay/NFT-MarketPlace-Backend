@@ -25,6 +25,10 @@ var Web3 = require('web3');
 var web3 = new Web3(new Web3.providers.HttpProvider(config.eth_http));
 var cp = require('child_process');
 var mailer = require('./../../common/controller/mailController'); 
+const { find } = require('../model/itemModel');
+// const { Collection } = require('mongoose');
+// const { collection } = require('../model/itemModel');
+// require('util').inspect.defaultOptions.depth = null
 
 /*
 * This is the function which used to add item in database
@@ -40,21 +44,24 @@ exports.add = function(req,res) {
         return;
     }  
     var item = new items();
+
     item.name = req.body.name;
     item.description = req.body.description;
     item.category_id = req.body.category_id;
     item.collection_id = req.body.collection_id;
-    item.author_id = req.decoded.user_id;
-    item.current_owner = req.decoded.user_id;
+    item.collection_keyword = req.body.collection_keyword;
+    // item.auther_id = req.decoded.user_id;
+    item.creator_address = req.decoded.public_key;
+    item.current_owner = req.decoded.public_key;
     item.price = req.body.price;
-    item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : '';
+    item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : Boolean;
     item.media = req.body.media ? req.body.media : '';
     item.thumb = req.body.thumb ? req.body.thumb : '';
     item.external_link = req.body.external_link ? req.body.external_link : '';
     item.attributes = req.body.attributes ? req.body.attributes : [];
     item.levels = req.body.levels ? req.body.levels : [];
     item.stats = req.body.stats ? req.body.stats : [];
-    collections.findOne({_id:req.body.collection_id}, function (err, collection) {
+    collections.findOne({collection_id: req.body.collection_id}, function (err, collection) {
         if (err || !collection) {
             res.status(404).json({
                 status: false,
@@ -63,7 +70,8 @@ exports.add = function(req,res) {
             });
             return;
         }
-        item.save(function (err ,itemObj) {
+        item.collection_address = collection.collection_address;
+        users.findOne({public_key: req.decoded.public_key}, function(err, userdetails){
             if (err) {
                 res.status(400).json({
                     status: false,
@@ -72,23 +80,33 @@ exports.add = function(req,res) {
                 });
                 return;
             }
-            collection.item_count = collection.item_count + 1;
-            collection.save(function (err ,collectionObj) {
-                res.json({
-                    status: true,
-                    message: "Item created successfully",
-                    result: itemObj
+            item.creator_image= userdetails.profile_image;
+            item.owner_image= userdetails.profile_image;
+            item.save(function (err ,itemObj) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                    return;
+                }
+                collection.item_count = collection.item_count + 1;
+                collection.save(function (err ,collectionObj) {
+                    res.json({
+                        status: true,
+                        message: "Item created successfully",
+                        result: itemObj
+                    });
                 });
-            });
-
-        })
-
+            })
+        });
     });
 }
-
 /*
 * This is the function which used to update item in database
 */
+
 exports.update = function(req,res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -99,16 +117,22 @@ exports.update = function(req,res) {
         });
         return;
     }  
-    console.log("item id ",req.body.item_id);
-    console.log("author id ",req.decoded.user_id);
-    items.findOne({_id:req.body.item_id, author_id: req.decoded.user_id, status:"inactive"}, function (err, item) {
-        if (err || !item) {
-            res.status(404).json({
+    // console.log("item id ",req.body.item_id);
+    // console.log("creator_address ",req.decoded.public_key);
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: false}, function (err, item) {
+        if (err) {
+            res.status(400).json({
                 status: false,
-                message: "Item not found",
+                message: "Request failed!",
                 errors:err
             });
             return;
+        }
+        else if (!item) {
+            res.status(404).json({
+                status: false,
+                message: "Item not found"
+            })
         }
         item.name = req.body.name ?  req.body.name : item.name;
         item.description = req.body.description ?  req.body.description : item.description;
@@ -116,7 +140,7 @@ exports.update = function(req,res) {
         item.media = req.body.media ?  req.body.media : item.media;
         item.thumb = req.body.thumb ?  req.body.thumb : item.thumb;
         item.external_link = req.body.external_link ?  req.body.external_link : item.external_link;
-        item.unlock_content_url = req.body.unlock_content_url ?  req.body.unlock_content_url : item.unlock_content_url;
+        item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : item.unlock_content_url;
         item.attributes = req.body.attributes ?  req.body.attributes : item.attributes;
         item.levels = req.body.levels ?  req.body.levels : item.levels;
         item.stats = req.body.stats ?  req.body.stats : item.stats;
@@ -140,6 +164,303 @@ exports.update = function(req,res) {
     })
 }
 
+
+/*
+* This is the function which used to delete item in database
+*/
+exports.delete = function(req,res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    items.findOne({_id:req.body._id, creator_address:req.decoded.public_key, status: false}, function (err, item) {
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+            return;
+        }
+        else if(!item){
+            res.status(404).json({
+                status: false,
+                message: "Item not found",
+                errors:err
+            });
+        } else {
+            collections.findOne({collection_id:item.collection_id},function(err, collection){
+                items.deleteOne({_id:req.body.item_id},function(err) {
+                    collection.item_count = collection.item_count - 1;
+                    collection.save(function(err,collectionObj){
+                        res.json({
+                            status: true,
+                            message: "Item deleted successfully"
+                        }); 
+                    })
+                })
+            })
+        }
+    });
+}
+
+
+/*
+* This is the function which used to list item in database
+*/
+exports.list = function(req,res) {
+    var keyword = req.query.keyword ? req.query.keyword : ''; 
+    keyword = keyword.replace("+"," ");     
+    var page = req.query.page ? req.query.page : '1';  
+    var query_0  = items.find();
+    var query_1  = items.find();
+    var query  = items.find();
+    var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
+    if ( keyword != '' ) {
+        search = { $or: [ { 
+            name :   {
+                $regex: new RegExp(keyword, "ig")
+        }  } , {
+            description : {
+                $regex : new RegExp ( keyword , "ig")
+            }
+        }] }
+       query = query.or(search)
+    }    
+    if(req.query.type == "mycollection" && req.decoded.public_key != null) {
+        
+            query = query.where({ 
+                
+                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': true},{
+                         $and:[{'current_owner':req.decoded.public_key, 'status': false}] 
+                        }]
+                    }]
+                }                
+            ).sort('-create_date') 
+        
+
+    } else if(req.query.type == "view" && req.decoded.public_key != null) {
+        query = query.where('_id',req.query._id);
+    } else {
+        if(req.query.user && req.decoded.public_key != null) {
+            if(req.decoded.role == 1 && req.query.user == "admin") {
+            } else {
+                query = query.where('status', true);
+            }
+            
+        } else {
+            query = query.where('status', true);
+        }
+        
+        if(req.query.type == "my") {
+            query = query.where('creator_address',req.query.user_address).sort('-create_date');
+        }else if(req.query.type == "collected") {
+            query = query.where('current_owner',req.query.user_address).where("creator_address",{"$ne":req.query.user_address}).sort('-create_date');
+        } else if(req.query.type == "view") { 
+            query = query.where('_id',req.query._id);
+        } else if(req.query.type == "offer") { 
+            query = query.where('has_offer',true);
+        } else if(req.query.type == "collection") {
+            query = query.where('collection_keyword',req.query.collection_keyword);
+        } else if(req.query.type == "category") { 
+            query = query.where('category_id',req.query.category_id);
+        } else if (req.query.type == "price") {
+            query = query.where('price',{ $gte: req.query.price_range })
+        } else if(req.query.type == "mostviewed") {
+            query = query.sort('-view_count')
+        } else if(req.query.type == "mostliked") {
+            query = query.sort('-like_count')
+        }else {
+            query = query.sort('-create_date')
+        }
+    }
+    var options;
+    if(req.query.type != "view") {
+        options = {
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image owner_image',
+            page:page,
+            offset:offset,
+            limit:10,    
+        }; 
+    } else {
+        query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
+        options = {
+            page:page,
+            offset:offset,
+            limit:10,    
+        }; 
+    }
+
+ 
+   
+    items.paginate(query, options).then(function (result) {
+        if(result.docs.length == 0){
+            res.status(404).json({
+                status: "failed",
+                message: "No items found"
+            });
+        }
+        // console.log();
+        else if(req.query.type != "view") { 
+            res.json({
+                status: true,
+                message: "Item retrieved successfully",
+                data: result,
+                return_id:0
+            });
+        } else {
+            var is_liked = 0;
+            if(req.decoded.public_key != null) {
+                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.public_key}, function (err, favourite) {
+                  if(favourite) {
+                      is_liked = 1
+                  }
+                  res.json({
+                    status: true,
+                    message: "Item retrieved successfully",
+                    data: result,
+                    return_id: is_liked
+                  });
+                })
+            } else {
+                res.json({
+                    status: true,
+                    message: "Item retrieved successfully",
+                    data: result,
+                    return_id: is_liked
+                });
+            }
+
+        }
+
+    }); 
+}
+
+
+/*
+* This is the function which used to purchase item in ethereum network
+*/
+// exports.purchase = function(req,res) {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         res.json({
+//             status: false,
+//             message: "Request failed",
+//             errors:errors.array()
+//         });
+//         return;
+//     } 
+//     items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
+//         if (err || !item) {
+//             res.json({
+//                 status: false,
+//                 message: "Item not found",
+//                 errors:err
+//             });
+//             return;
+//         }
+//         userController.getUserInfoByID(item.current_owner,function(err,receiver){
+//             userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
+//                 this.checkbalance(sender.public_key,item,function(has_balance) {
+//                     if(!has_balance) {
+//                         res.json({
+//                             status: false,
+//                             message: "Not enough balance to proceed purchase",
+//                             errors:err
+//                         });
+//                         return;
+//                     }
+//                     this.transferAdminComission(item, function(error, comission){
+//                         this.transferBalance(sender,receiver, item, comission, function(is_transferred){
+//                             if(!has_balance) {
+//                                 res.json({
+//                                     status: false,
+//                                     message: "Unable to transfer ETH",
+//                                     errors:err
+//                                 });
+//                                 return;
+//                             }
+//                             var symbolabi = item.collection_id.contract_symbol+'.abi';
+//                             var command = 'sh transaction.sh '+receiver.public_key +' '+sender.public_key +' '+item.token_id + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  receiver.private_key
+//                             cp.exec(command, function(err, stdout, stderr) {
+//                                 console.log('stderr ',stderr)
+//                                 console.log('stdout ',stdout)
+//                                 // handle err, stdout, stderr
+//                                 if(err) {
+//                                     console.log("error is ",err)
+//                                     res.json({
+//                                         status: false,
+//                                         message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
+//                                     });
+//                                     return
+//                                 }
+                    
+//                                 var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
+//                                 var transaction_hash = t_array[0].replace('Waiting','')
+                    
+//                                 var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
+//                                 var status_block = status_array[0]
+//                                 if(status_block == "Failed") {
+//                                     res.json({
+//                                         status:false,
+//                                         message:"NFT item transferred failed in network",
+//                                         data: {
+//                                             transaction_hash:transaction_hash,
+//                                         }
+//                                     })
+//                                 } else {
+//                                     item.current_owner = req.decoded.user_id;
+//                                     collections.findOne({_id:item.collection_id._id},function(err, collection){
+//                                         collection.volume_traded = collection.volume_traded + item.price;
+//                                         collection.save(function (err ,collectionsaveObj) {
+                                   
+                                    
+//                                     item.save(function (err ,itemObj) {
+//                                         var history = new histories();
+//                                         history.item_id = item._id;
+//                                         history.collection_id = item.collection_id._id
+//                                         history.from_id = receiver._id;
+//                                         history.to_id = sender._id
+//                                         history.transaction_hash = transaction_hash
+//                                         history.history_type = "transfer";
+//                                         history.price = item.price;
+//                                         history.save(function (err ,historyObj) {
+//                                             var price = new prices();
+//                                             price.item_id = item._id;
+//                                             price.price = item.price;
+//                                             price.user_id = sender._id
+//                                             price.save(function (err ,priceObj) {
+//                                                 res.json({
+//                                                     status: true,
+//                                                     message: "Item Transfer successfully",
+//                                                     result: itemObj
+//                                                 });
+//                                             });
+    
+//                                         });
+//                                     });
+//                                     })
+//                                     });
+//                                 }
+//                             });
+    
+//                         });
+//                     })
+
+//                 })
+//             })
+//         });
+//     });
+// }
+
+
+
+
 /*
 * This is the function which used to publish item in ethereum network
 */
@@ -153,85 +474,43 @@ exports.publish = function(req,res) {
         });
         return;
     } 
-    items.findOne({_id:req.body.item_id, author_id: req.decoded.user_id, status:"inactive"}).populate('collection_id').exec(function (err, item) {
-        if (err || !item) {
-            res.status(404).json({
+    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status:false}, 
+                            {'$set': {item_id: req.body.item_id, token_id : req.body.token_id, minted_date: new Date(), status: true}}, (err, item) => {
+        if (err) {
+            res.status(400).json({
                 status: false,
-                message: "Item not found",
+                message: "request failed",
                 errors:err
             });
             return;
         }
-        userController.getUserInfoByID(req.decoded.user_id,function(err,user){
-            var symbolabi = item.collection_id.contract_symbol+'.abi';
-            var command = 'sh mint.sh '+user.public_key + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  user.private_key
-            cp.exec(command, function(err, stdout, stderr) {
-                console.log('stderr ',stderr)
-                console.log('stdout ',stdout)
-                // handle err, stdout, stderr
-                if(err) {
-                    console.log("error is ",err)
-                    res.status(401).json({
-                        status: false,
-                        message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
-                    });
-                    return
-                }
-    
-                var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
-                var transaction_hash = t_array[0].replace('Waiting','')
-    
-                var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
-                var status_block = status_array[0]
-                if(status_block == "Failed") {
-                    res.status(400).json({
-                        status:false,
-                        message:"Item mint failed in network",
-                        data: {
-                            transaction_hash:transaction_hash,
-                        }
-                    })
-                } else {
-                    var token_array = stdout.toString().split('"tokenId": ').pop().replace(/\n|\r/g, " ").split(' ')
-                    var token_id = token_array[0].replace('\"','').replace('\"','');
-                    item.token_id = token_id;
-                    item.minted_date = new Date();
-                    item.status = "active";
-                    item.save(function (err ,itemObj) {
-                        if (err) {
-                            res.status(401).json({
-                                status: false,
-                                message: "Request failed",
-                                errors:err
-                            });
-                            return;
-                        }
-                        var history = new histories();
-                        history.item_id = item._id;
-                        history.collection_id = item.collection_id._id
-                        history.from_id = '000000000000000000000000';
-                        history.to_id = user._id
-                        history.transaction_hash = transaction_hash
-                        history.price = item.price;
-                        history.history_type = "minted";
-                        history.save(function (err ,historyObj) {
-                            var price = new prices();
-                            price.item_id = item._id;
-                            price.price = item.price;
-                            price.user_id = user._id
-                            price.save(function (err ,priceObj) {
-                                res.json({
-                                    status: true,
-                                    message: "Item published successfully",
-                                    result: itemObj
-                                });
-                            })
+        userController.getUserInfoByID(req.decoded.public_key,function(err,user){
+                var history = new histories();
+                history.item_id = req.body.item_id;
+                history.collection_id = item.collection_id;
+                history.from_address = '0x0000000000000000000000000000000000000000';
+                history.to_address = user.public_key;
+                history.transaction_hash = req.body.transaction_hash
+                history.price = item.price;
+                history.history_type = "minted";
+                history.save(function (err ,historyObj) {
+                    // console.log(historyObj);
+                    var price = new prices();
+                    price.item_id = req.body.item_id;
+                    price.price = item.price;
+                    price.user_address = user.public_key;
+                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
+                    price.save(function (err ,priceObj) {
+                        // console.log(priceObj);
+                        res.json({
+                            status: true,
+                            message: "Item published successfully",
+                            result: itemObj
                         });
-                    });
-                }
+                    })
+                });
             });
         });
-
     })
 }
 
@@ -468,42 +747,7 @@ exports.pricelist = function(req,res) {
     }); 
 }
 
-/*
-* This is the function which used to delete item in database
-*/
-exports.delete = function(req,res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        res.json({
-            status: false,
-            message: "Request failed",
-            errors:errors.array()
-        });
-        return;
-    }  
-    items.findOne({_id:req.body.item_id, author_id:req.decoded.user_id, status:"inactive"}, function (err, item) {
-        if (err || !item) {
-            res.json({
-                status: false,
-                message: "Item not found",
-                errors:err
-            });
-            return;
-        } else {
-            collections.findOne({_id:item.collection_id},function(err, collection){
-                items.deleteOne({_id:req.body.item_id},function(err) {
-                    collection.item_count = collection.item_count - 1;
-                    collection.save(function(err,collectionObj){
-                        res.json({
-                            status: true,
-                            message: "Item deleted successfully"
-                        }); 
-                    })
-                })
-            })
-        }
-    });
-}
+
 
 /*
 * This is the function which used to get more from collection for item detail page
@@ -550,118 +794,118 @@ exports.listByCollection = function(req,res) {
     })
 }
 
-/*
-* This is the function which used to list item in database
-*/
-exports.list = function(req,res) {
-    var keyword = req.query.keyword ? req.query.keyword : ''; 
-    keyword = keyword.replace("+"," ");     
-    var page = req.query.page ? req.query.page : '1';  
-    var query  = items.find();
-    var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
-    if ( keyword != '' ) {
-        search = { $or: [ { 
-            name :   {
-                $regex: new RegExp(keyword, "ig")
-        }  } , {
-            description : {
-                $regex : new RegExp ( keyword , "ig")
-            }
-        }] }
-       query = query.or(search)
-    }    
-    if(req.query.type == "mycollection" && req.decoded.user_id != null) {
-        query = query.where('collection_id',req.query.collection_id);
-        query = query.sort('-create_date')
-    } else if(req.query.type == "view" && req.decoded.user_id != null) {
-        query = query.where('_id',req.query.item_id);
-    } else {
-        if(req.query.user && req.decoded.user_id != null) {
-            if(req.decoded.role == 1 && req.query.user == "admin") {
-            } else {
-                query = query.where('status','active');
-            }
+
+
+//backup
+// exports.list = function(req,res) {
+//     var keyword = req.query.keyword ? req.query.keyword : ''; 
+//     keyword = keyword.replace("+"," ");     
+//     var page = req.query.page ? req.query.page : '1';  
+//     var query  = items.find();
+//     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
+//     if ( keyword != '' ) {
+//         search = { $or: [ { 
+//             name :   {
+//                 $regex: new RegExp(keyword, "ig")
+//         }  } , {
+//             description : {
+//                 $regex : new RegExp ( keyword , "ig")
+//             }
+//         }] }
+//        query = query.or(search)
+//     }    
+//     if(req.query.type == "mycollection" && req.decoded.user_id != null) {
+//         query = query.where('collection_id',req.query.collection_id);
+//         query = query.sort('-create_date')
+//     } else if(req.query.type == "view" && req.decoded.user_id != null) {
+//         query = query.where('_id',req.query.item_id);
+//     } else {
+//         if(req.query.user && req.decoded.user_id != null) {
+//             if(req.decoded.role == 1 && req.query.user == "admin") {
+//             } else {
+//                 query = query.where('status','active');
+//             }
             
-        } else {
-            query = query.where('status','active');
-        }
+//         } else {
+//             query = query.where('status','active');
+//         }
         
-        if(req.query.type == "my") {
-            query = query.where('author_id',req.query.user_id).sort('-create_date');
-        }else if(req.query.type == "collected") {
-            query = query.where('current_owner',req.query.user_id).where("author_id",{"$ne":req.query.user_id}).sort('-create_date');
-        } else if(req.query.type == "view") { 
-            query = query.where('_id',req.query.item_id);
-        } else if(req.query.type == "offer") { 
-            query = query.where('has_offer',true);
-        } else if(req.query.type == "collection") { 
-            query = query.where('collection_id',req.query.collection_id);
-        } else if(req.query.type == "category") { 
-            query = query.where('category_id',req.query.category_id);
-        } else if (req.query.type == "price") {
-            query = query.where('price',{ $gte: req.query.price_range })
-        } else if(req.query.type == "mostviewed") {
-            query = query.sort('-view_count')
-        } else if(req.query.type == "mostliked") {
-            query = query.sort('-like_count')
-        } else {
-            query = query.sort('-create_date')
-        }
-    }
-    var options;
-    if(req.query.type != "view") { 
-        options = {
-            select:  'name description thumb like_count create_date status price',
-            page:page,
-            offset:offset,
-            limit:10,    
-        }; 
-    } else {
-        query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
-        options = {
-            page:page,
-            offset:offset,
-            limit:10,    
-        }; 
-    }
+//         if(req.query.type == "my") {
+//             query = query.where('author_id',req.query.user_id).sort('-create_date');
+//         }else if(req.query.type == "collected") {
+//             query = query.where('current_owner',req.query.user_id).where("author_id",{"$ne":req.query.user_id}).sort('-create_date');
+//         } else if(req.query.type == "view") { 
+//             query = query.where('_id',req.query.item_id);
+//         } else if(req.query.type == "offer") { 
+//             query = query.where('has_offer',true);
+//         } else if(req.query.type == "collection") { 
+//             query = query.where('collection_id',req.query.collection_id);
+//         } else if(req.query.type == "category") { 
+//             query = query.where('category_id',req.query.category_id);
+//         } else if (req.query.type == "price") {
+//             query = query.where('price',{ $gte: req.query.price_range })
+//         } else if(req.query.type == "mostviewed") {
+//             query = query.sort('-view_count')
+//         } else if(req.query.type == "mostliked") {
+//             query = query.sort('-like_count')
+//         } else {
+//             query = query.sort('-create_date')
+//         }
+//     }
+//     var options;
+//     if(req.query.type != "view") { 
+//         options = {
+//             select:  'name description thumb like_count create_date status price',
+//             page:page,
+//             offset:offset,
+//             limit:10,    
+//         }; 
+//     } else {
+//         query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
+//         options = {
+//             page:page,
+//             offset:offset,
+//             limit:10,    
+//         }; 
+//     }
 
  
    
-    items.paginate(query, options).then(function (result) {
-        if(req.query.type != "view") { 
-            res.json({
-                status: true,
-                message: "Item retrieved successfully",
-                data: result,
-                return_id:0
-            });
-        } else {
-            var is_liked = 0;
-            if(req.decoded.user_id != null) {
-                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.user_id}, function (err, favourite) {
-                  if(favourite) {
-                      is_liked = 1
-                  }
-                  res.json({
-                    status: true,
-                    message: "Item retrieved successfully",
-                    data: result,
-                    return_id: is_liked
-                  });
-                })
-            } else {
-                res.json({
-                    status: true,
-                    message: "Item retrieved successfully",
-                    data: result,
-                    return_id: is_liked
-                });
-            }
+//     items.paginate(query, options).then(function (result) {
+//         if(req.query.type != "view") { 
+//             res.json({
+//                 status: true,
+//                 message: "Item retrieved successfully",
+//                 data: result,
+//                 return_id:0
+//             });
+//         } else {
+//             var is_liked = 0;
+//             if(req.decoded.user_id != null) {
+//                 favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.user_id}, function (err, favourite) {
+//                   if(favourite) {
+//                       is_liked = 1
+//                   }
+//                   res.json({
+//                     status: true,
+//                     message: "Item retrieved successfully",
+//                     data: result,
+//                     return_id: is_liked
+//                   });
+//                 })
+//             } else {
+//                 res.json({
+//                     status: true,
+//                     message: "Item retrieved successfully",
+//                     data: result,
+//                     return_id: is_liked
+//                 });
+//             }
 
-        }
+//         }
 
-    }); 
-}
+//     }); 
+// }
 
 /*
 * This is the function which used to list item in database

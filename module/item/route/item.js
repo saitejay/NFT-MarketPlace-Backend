@@ -16,8 +16,8 @@ var optionalauth = require("./../../../middleware/optionalauth");
 const { check } = require('express-validator');
 
 router.post('/add',[check('name').not().isEmpty(),check('price').not().isEmpty(),check('description').not().isEmpty(),check('category_id').not().isEmpty(),check('collection_id').not().isEmpty(),auth],itemController.add)
-router.put('/update',[check('item_id').not().isEmpty(),auth],itemController.update)
-router.delete('/delete',[check('item_id').not().isEmpty(),auth],itemController.delete)
+router.put('/update',[check('_id').not().isEmpty(),auth],itemController.update)
+router.delete('/delete',[check('_id').not().isEmpty(),auth],itemController.delete)
 router.get('/list',optionalauth,itemController.list)
 router.get('/listbycollection',itemController.listByCollection)
 router.get('/morefromcollection',itemController.moreFromCollection)
@@ -37,7 +37,6 @@ router.get('/checkbalance',auth,itemController.checkUserBalance)
 router.post('/sendeth',[check('eth_address').not().isEmpty(),check('amount').not().isEmpty(),auth],itemController.sendETH)
 router.post('/report',[check('message').not().isEmpty(), check('item_id').not().isEmpty(),auth],itemController.report)
 router.post('/updateprice',[check('item_id').not().isEmpty(),auth],itemController.updatePrice)
-
 router.get('/view/:id',itemController.view)
 router.post('/generateabi',itemController.generateHash)
 router.get('/getabi',itemController.getABI)
