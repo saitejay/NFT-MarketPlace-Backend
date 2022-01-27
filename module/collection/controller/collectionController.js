@@ -18,6 +18,7 @@ const config = require('../../../helper/config');
 var fs = require('fs');
 const { collection } = require('../model/collectionModel')
 const { Console } = require('console');
+const itemModel = require('../../item/model/itemModel');
 /*
 * This is the function which used to add collection in database
 */
@@ -94,33 +95,37 @@ exports.update = function(req,res) {
             }); 
         } 
         else {
+
             if (req.body.name) {
+                let previous_keyword = collection.collection_keyword;
                 collection.name = req.body.name;
                 let name = req.body.name;
-                let keyword = name.toLowerCase().split(' ').join('-');
-                collection.collection_keyword = keyword;
-            }
-            collection.description = req.body.description ? req.body.description : collection.description;
-            collection.image = req.body.image ?  req.body.image : collection.image;
-            collection.banner = req.body.banner ? req.body.banner : collection.banner;
-            collection.royalties = req.body.royalties ? req.body.royalties : collection.royalties;
-            
-            collection.save(function (err , collection) {
-                if (err) {
-                    res.status(400).json({
-                        status: false,
-                        message: "Request failed",
-                        errors:err
+                let new_keyword = name.toLowerCase().split(' ').join('-');
+                collection.collection_keyword = new_keyword;
+                itemModel.updateMany({collection_keyword: previous_keyword}, {collection_keyword: new_keyword}, function(error, itemObjs) {
+                    collection.description = req.body.description ? req.body.description : collection.description;
+                    collection.image = req.body.image ?  req.body.image : collection.image;
+                    collection.banner = req.body.banner ? req.body.banner : collection.banner;
+                    collection.royalties = req.body.royalties ? req.body.royalties : collection.royalties;
+                    
+                    collection.save(function (err , collection) {
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors:err
+                            });
+                            return;
+                        } else {
+                            res.status(200).json({
+                                status: true,
+                                message: "Collection updated successfully",
+                                result: collection 
+                            });  
+                        }
                     });
-                    return;
-                } else {
-                    res.status(200).json({
-                        status: true,
-                        message: "Collection updated successfully",
-                        result: collection 
-                    });  
-                }
-            });
+                });
+            }
         }
     });
 }
