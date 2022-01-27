@@ -217,8 +217,6 @@ exports.list = function(req,res) {
     var keyword = req.query.keyword ? req.query.keyword : ''; 
     keyword = keyword.replace("+"," ");     
     var page = req.query.page ? req.query.page : '1';  
-    var query_0  = items.find();
-    var query_1  = items.find();
     var query  = items.find();
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
     if ( keyword != '' ) {
@@ -245,7 +243,7 @@ exports.list = function(req,res) {
         
 
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
-        query = query.where('_id',req.query._id);
+        query = query.where('_id', req.query._id);
     } else {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
@@ -282,18 +280,20 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image owner_image',
+            
             page:page,
             offset:offset,
             limit:10,    
         }; 
     } else {
-        query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
+        // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image owner_image',
             page:page,
             offset:offset,
             limit:10,    
-        }; 
+        };
+        // console.log(query,options);
     }
 
  
@@ -316,7 +316,7 @@ exports.list = function(req,res) {
         } else {
             var is_liked = 0;
             if(req.decoded.public_key != null) {
-                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.public_key}, function (err, favourite) {
+                favourites.findOne({item_id:req.query._id, user_id:req.decoded.public_key}, function (err, favourite) {
                   if(favourite) {
                       is_liked = 1
                   }
@@ -494,14 +494,14 @@ exports.publish = function(req,res) {
                 history.price = item.price;
                 history.history_type = "minted";
                 history.save(function (err ,historyObj) {
-                    console.log(historyObj);
+                    // console.log(historyObj);
                     var price = new prices();
                     price.item_id = req.body.item_id;
                     price.price = item.price;
                     price.user_address = user.public_key;
                     items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
                     price.save(function (err ,priceObj) {
-                        console.log(priceObj);
+                        // console.log(priceObj);
                         res.json({
                             status: true,
                             message: "Item published successfully",
