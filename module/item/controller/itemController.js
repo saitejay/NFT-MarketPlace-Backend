@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : itemController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all item related api function.
 */
 
 var items = require('../model/itemModel');
@@ -195,7 +191,7 @@ exports.delete = function(req,res) {
             });
         } else {
             collections.findOne({collection_id:item.collection_id},function(err, collection){
-                items.deleteOne({_id:req.body.item_id},function(err) {
+                items.deleteOne({_id:req.body._id},function(err) {
                     collection.item_count = collection.item_count - 1;
                     collection.save(function(err,collectionObj){
                         res.json({
@@ -342,123 +338,6 @@ exports.list = function(req,res) {
 }
 
 
-/*
-* This is the function which used to purchase item in ethereum network
-*/
-// exports.purchase = function(req,res) {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         res.json({
-//             status: false,
-//             message: "Request failed",
-//             errors:errors.array()
-//         });
-//         return;
-//     } 
-//     items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
-//         if (err || !item) {
-//             res.json({
-//                 status: false,
-//                 message: "Item not found",
-//                 errors:err
-//             });
-//             return;
-//         }
-//         userController.getUserInfoByID(item.current_owner,function(err,receiver){
-//             userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
-//                 this.checkbalance(sender.public_key,item,function(has_balance) {
-//                     if(!has_balance) {
-//                         res.json({
-//                             status: false,
-//                             message: "Not enough balance to proceed purchase",
-//                             errors:err
-//                         });
-//                         return;
-//                     }
-//                     this.transferAdminComission(item, function(error, comission){
-//                         this.transferBalance(sender,receiver, item, comission, function(is_transferred){
-//                             if(!has_balance) {
-//                                 res.json({
-//                                     status: false,
-//                                     message: "Unable to transfer ETH",
-//                                     errors:err
-//                                 });
-//                                 return;
-//                             }
-//                             var symbolabi = item.collection_id.contract_symbol+'.abi';
-//                             var command = 'sh transaction.sh '+receiver.public_key +' '+sender.public_key +' '+item.token_id + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  receiver.private_key
-//                             cp.exec(command, function(err, stdout, stderr) {
-//                                 console.log('stderr ',stderr)
-//                                 console.log('stdout ',stdout)
-//                                 // handle err, stdout, stderr
-//                                 if(err) {
-//                                     console.log("error is ",err)
-//                                     res.json({
-//                                         status: false,
-//                                         message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
-//                                     });
-//                                     return
-//                                 }
-                    
-//                                 var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
-//                                 var transaction_hash = t_array[0].replace('Waiting','')
-                    
-//                                 var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
-//                                 var status_block = status_array[0]
-//                                 if(status_block == "Failed") {
-//                                     res.json({
-//                                         status:false,
-//                                         message:"NFT item transferred failed in network",
-//                                         data: {
-//                                             transaction_hash:transaction_hash,
-//                                         }
-//                                     })
-//                                 } else {
-//                                     item.current_owner = req.decoded.user_id;
-//                                     collections.findOne({_id:item.collection_id._id},function(err, collection){
-//                                         collection.volume_traded = collection.volume_traded + item.price;
-//                                         collection.save(function (err ,collectionsaveObj) {
-                                   
-                                    
-//                                     item.save(function (err ,itemObj) {
-//                                         var history = new histories();
-//                                         history.item_id = item._id;
-//                                         history.collection_id = item.collection_id._id
-//                                         history.from_id = receiver._id;
-//                                         history.to_id = sender._id
-//                                         history.transaction_hash = transaction_hash
-//                                         history.history_type = "transfer";
-//                                         history.price = item.price;
-//                                         history.save(function (err ,historyObj) {
-//                                             var price = new prices();
-//                                             price.item_id = item._id;
-//                                             price.price = item.price;
-//                                             price.user_id = sender._id
-//                                             price.save(function (err ,priceObj) {
-//                                                 res.json({
-//                                                     status: true,
-//                                                     message: "Item Transfer successfully",
-//                                                     result: itemObj
-//                                                 });
-//                                             });
-    
-//                                         });
-//                                     });
-//                                     })
-//                                     });
-//                                 }
-//                             });
-    
-//                         });
-//                     })
-
-//                 })
-//             })
-//         });
-//     });
-// }
-
-
 
 
 /*
@@ -473,7 +352,7 @@ exports.publish = function(req,res) {
             errors:errors.array()
         });
         return;
-    } 
+    }
     items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status:false}, 
                             {'$set': {item_id: req.body.item_id, token_id : req.body.token_id, minted_date: new Date(), status: true}}, (err, item) => {
         if (err) {
@@ -590,7 +469,7 @@ exports.purchase = function(req,res) {
             return;
         }
         userController.getUserInfoByID(item.current_owner,function(err,receiver){
-            userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
+            userController.getUserInfoByID(req.decoded.public_key,function(err,sender){
                 this.checkbalance(sender.public_key,item,function(has_balance) {
                     if(!has_balance) {
                         res.json({
