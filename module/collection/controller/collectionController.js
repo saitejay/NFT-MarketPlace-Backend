@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : collectionController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all collection related api function.
 */
 
 var collections = require('../model/collectionModel');
@@ -95,13 +91,6 @@ exports.update = function(req,res) {
             }); 
         } 
         else {
-
-
-            // if (req.body.profile_image) {
-            //     user.profile_image = req.body.profile_image;
-            //     itemModel.updateMany({creator_address: req.decoded.public_key}, {creator_image: req.body.profile_image}, function(error, itemObj){
-            //         itemModel.updateMany({current_owner: req.decoded.public_key}, {owner_image: req.body.profile_image}, function(err, itemObj) {
-
 
             if (req.body.name) {
                 let previous_keyword = collection.collection_keyword;

@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : itemController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all item related api function.
 */
 
 var items = require('../model/itemModel');
@@ -81,7 +77,9 @@ exports.add = function(req,res) {
                 return;
             }
             item.creator_image= userdetails.profile_image;
+            item.creator_name = userdetails.username;
             item.owner_image= userdetails.profile_image;
+            item.current_owner_name = userdetails.username;
             item.save(function (err ,itemObj) {
                 if (err) {
                     res.status(400).json({
@@ -195,7 +193,7 @@ exports.delete = function(req,res) {
             });
         } else {
             collections.findOne({collection_id:item.collection_id},function(err, collection){
-                items.deleteOne({_id:req.body.item_id},function(err) {
+                items.deleteOne({_id:req.body._id},function(err) {
                     collection.item_count = collection.item_count - 1;
                     collection.save(function(err,collectionObj){
                         res.json({
@@ -217,8 +215,6 @@ exports.list = function(req,res) {
     var keyword = req.query.keyword ? req.query.keyword : ''; 
     keyword = keyword.replace("+"," ");     
     var page = req.query.page ? req.query.page : '1';  
-    var query_0  = items.find();
-    var query_1  = items.find();
     var query  = items.find();
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
     if ( keyword != '' ) {
@@ -245,22 +241,20 @@ exports.list = function(req,res) {
         
 
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
-        query = query.where('_id',req.query._id);
+        query = query.where('_id', req.query._id);
     } else {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
             } else {
                 query = query.where('status', true);
             }
-            
         } else {
             query = query.where('status', true);
         }
-        
         if(req.query.type == "my") {
-            query = query.where('creator_address',req.query.user_address).sort('-create_date');
+            query = query.where('creator_address',req.decoded.public_key).sort('-create_date');
         }else if(req.query.type == "collected") {
-            query = query.where('current_owner',req.query.user_address).where("creator_address",{"$ne":req.query.user_address}).sort('-create_date');
+            query = query.where('current_owner',req.decoded.public_key).sort('-create_date');
         } else if(req.query.type == "view") { 
             query = query.where('_id',req.query._id);
         } else if(req.query.type == "offer") { 
@@ -282,18 +276,20 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image owner_image',
+            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name',
             page:page,
             offset:offset,
             limit:10,    
         }; 
     } else {
-        query = query.populate({path: 'collection_keyword', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
+        // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name',
             page:page,
             offset:offset,
             limit:10,    
-        }; 
+        };
+        // console.log(query,options);
     }
 
  
@@ -316,7 +312,7 @@ exports.list = function(req,res) {
         } else {
             var is_liked = 0;
             if(req.decoded.public_key != null) {
-                favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.public_key}, function (err, favourite) {
+                favourites.findOne({item_id:req.query._id, user_id:req.decoded.public_key}, function (err, favourite) {
                   if(favourite) {
                       is_liked = 1
                   }
@@ -342,123 +338,6 @@ exports.list = function(req,res) {
 }
 
 
-/*
-* This is the function which used to purchase item in ethereum network
-*/
-// exports.purchase = function(req,res) {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         res.json({
-//             status: false,
-//             message: "Request failed",
-//             errors:errors.array()
-//         });
-//         return;
-//     } 
-//     items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
-//         if (err || !item) {
-//             res.json({
-//                 status: false,
-//                 message: "Item not found",
-//                 errors:err
-//             });
-//             return;
-//         }
-//         userController.getUserInfoByID(item.current_owner,function(err,receiver){
-//             userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
-//                 this.checkbalance(sender.public_key,item,function(has_balance) {
-//                     if(!has_balance) {
-//                         res.json({
-//                             status: false,
-//                             message: "Not enough balance to proceed purchase",
-//                             errors:err
-//                         });
-//                         return;
-//                     }
-//                     this.transferAdminComission(item, function(error, comission){
-//                         this.transferBalance(sender,receiver, item, comission, function(is_transferred){
-//                             if(!has_balance) {
-//                                 res.json({
-//                                     status: false,
-//                                     message: "Unable to transfer ETH",
-//                                     errors:err
-//                                 });
-//                                 return;
-//                             }
-//                             var symbolabi = item.collection_id.contract_symbol+'.abi';
-//                             var command = 'sh transaction.sh '+receiver.public_key +' '+sender.public_key +' '+item.token_id + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  receiver.private_key
-//                             cp.exec(command, function(err, stdout, stderr) {
-//                                 console.log('stderr ',stderr)
-//                                 console.log('stdout ',stdout)
-//                                 // handle err, stdout, stderr
-//                                 if(err) {
-//                                     console.log("error is ",err)
-//                                     res.json({
-//                                         status: false,
-//                                         message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
-//                                     });
-//                                     return
-//                                 }
-                    
-//                                 var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
-//                                 var transaction_hash = t_array[0].replace('Waiting','')
-                    
-//                                 var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
-//                                 var status_block = status_array[0]
-//                                 if(status_block == "Failed") {
-//                                     res.json({
-//                                         status:false,
-//                                         message:"NFT item transferred failed in network",
-//                                         data: {
-//                                             transaction_hash:transaction_hash,
-//                                         }
-//                                     })
-//                                 } else {
-//                                     item.current_owner = req.decoded.user_id;
-//                                     collections.findOne({_id:item.collection_id._id},function(err, collection){
-//                                         collection.volume_traded = collection.volume_traded + item.price;
-//                                         collection.save(function (err ,collectionsaveObj) {
-                                   
-                                    
-//                                     item.save(function (err ,itemObj) {
-//                                         var history = new histories();
-//                                         history.item_id = item._id;
-//                                         history.collection_id = item.collection_id._id
-//                                         history.from_id = receiver._id;
-//                                         history.to_id = sender._id
-//                                         history.transaction_hash = transaction_hash
-//                                         history.history_type = "transfer";
-//                                         history.price = item.price;
-//                                         history.save(function (err ,historyObj) {
-//                                             var price = new prices();
-//                                             price.item_id = item._id;
-//                                             price.price = item.price;
-//                                             price.user_id = sender._id
-//                                             price.save(function (err ,priceObj) {
-//                                                 res.json({
-//                                                     status: true,
-//                                                     message: "Item Transfer successfully",
-//                                                     result: itemObj
-//                                                 });
-//                                             });
-    
-//                                         });
-//                                     });
-//                                     })
-//                                     });
-//                                 }
-//                             });
-    
-//                         });
-//                     })
-
-//                 })
-//             })
-//         });
-//     });
-// }
-
-
 
 
 /*
@@ -473,8 +352,8 @@ exports.publish = function(req,res) {
             errors:errors.array()
         });
         return;
-    } 
-    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status:false}, 
+    }
+    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status: false}, 
                             {'$set': {item_id: req.body.item_id, token_id : req.body.token_id, minted_date: new Date(), status: true}}, (err, item) => {
         if (err) {
             res.status(400).json({
@@ -483,8 +362,14 @@ exports.publish = function(req,res) {
                 errors:err
             });
             return;
+        }else if(!item){
+            res.status(404).json({
+                status: false,
+                message: "Item not found"
+            });
         }
-        userController.getUserInfoByID(req.decoded.public_key,function(err,user){
+        else{
+            userController.getUserInfoByID(req.decoded.public_key,function(err,user){
                 var history = new histories();
                 history.item_id = req.body.item_id;
                 history.collection_id = item.collection_id;
@@ -500,18 +385,19 @@ exports.publish = function(req,res) {
                     price.price = item.price;
                     price.user_address = user.public_key;
                     items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
-                    price.save(function (err ,priceObj) {
-                        // console.log(priceObj);
-                        res.json({
-                            status: true,
-                            message: "Item published successfully",
-                            result: itemObj
-                        });
-                    })
+                        price.save(function (err ,priceObj) {
+                            // console.log(priceObj);
+                            res.json({
+                                status: true,
+                                message: "Item published successfully",
+                                result: itemObj
+                            });
+                        })
+                    });
                 });
-            });
-        });
-    })
+            })
+        }
+    });
 }
 
 
@@ -573,113 +459,131 @@ exports.updatePrice = function(req,res){
 exports.purchase = function(req,res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        res.json({
+        res.status(400).json({
             status: false,
             message: "Request failed",
             errors:errors.array()
         });
         return;
     } 
-    items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
-        if (err || !item) {
-            res.json({
+    items.findOne({item_id:req.body.item_id, status:true, is_on_auction: false}).exec(function (err, item) {
+        if (err) {
+            res.status(400).json({
                 status: false,
-                message: "Item not found",
+                message: "Request failed",
                 errors:err
             });
             return;
-        }
-        userController.getUserInfoByID(item.current_owner,function(err,receiver){
-            userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
-                this.checkbalance(sender.public_key,item,function(has_balance) {
-                    if(!has_balance) {
-                        res.json({
-                            status: false,
-                            message: "Not enough balance to proceed purchase",
-                            errors:err
-                        });
-                        return;
-                    }
-                    this.transferAdminComission(item, function(error, comission){
-                        this.transferBalance(sender,receiver, item, comission, function(is_transferred){
-                            if(!has_balance) {
-                                res.json({
-                                    status: false,
-                                    message: "Unable to transfer ETH",
-                                    errors:err
-                                });
-                                return;
-                            }
-                            var symbolabi = item.collection_id.contract_symbol+'.abi';
-                            var command = 'sh transaction.sh '+receiver.public_key +' '+sender.public_key +' '+item.token_id + ' ' + item.collection_id.contract_address + ' ' +  symbolabi+' ' +  receiver.private_key
-                            cp.exec(command, function(err, stdout, stderr) {
-                                console.log('stderr ',stderr)
-                                console.log('stdout ',stdout)
-                                // handle err, stdout, stderr
-                                if(err) {
-                                    console.log("error is ",err)
-                                    res.json({
+        } else if (!item) {
+            res.status(404).json({
+                status: false,
+                message: "Item not found",
+            });
+            return;
+        } else if (item.current_owner == req.decoded.public_key) {
+            res.status(401).json({
+                status: false,
+                message: "You are not allowed to purchase on your NFT item",
+            });
+            return;
+        } else {
+            let prev_owner = item.current_owner;
+            users.findOne({public_key: req.decoded.public_key}, function(err, user){
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                    return;
+                } else if (!user) {
+                    res.status(404).json({
+                        status: false,
+                        message: "User not found",
+                    });
+                    return;
+                } else {
+                    item.current_owner = req.decoded.public_key;
+                    item.owner_image = user.profile_image;
+                    item.current_owner_name = user.username;
+                    collections.findOne({collection_id:item.collection_id},function(err, collection){
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors:err
+                            });
+                            return;
+                        } else if (!collection) {
+                            res.status(404).json({
+                                status: false,
+                                message: "Collection not found",
+                            });
+                            return;
+                        } else {
+                            collection.volume_traded = collection.volume_traded + item.price;
+                            collection.save(function (err ,collectionsaveObj) {
+                                if (err) {
+                                    res.status(400).json({
                                         status: false,
-                                        message: err.toString().split('ERROR: ').pop().replace(/\n|\r/g, "")
+                                        message: "Request failed",
+                                        errors:err
                                     });
-                                    return
+                                    return;
                                 }
-                    
-                                var t_array = stdout.toString().split('Transaction hash: ').pop().replace(/\n|\r/g, "").split(' ')
-                                var transaction_hash = t_array[0].replace('Waiting','')
-                    
-                                var status_array = stdout.toString().split('Status: ').pop().replace(/\n|\r/g, " ").split(' ')
-                                var status_block = status_array[0]
-                                if(status_block == "Failed") {
-                                    res.json({
-                                        status:false,
-                                        message:"NFT item transferred failed in network",
-                                        data: {
-                                            transaction_hash:transaction_hash,
-                                        }
-                                    })
-                                } else {
-                                    item.current_owner = req.decoded.user_id;
-                                    collections.findOne({_id:item.collection_id._id},function(err, collection){
-                                        collection.volume_traded = collection.volume_traded + item.price;
-                                        collection.save(function (err ,collectionsaveObj) {
-                                   
-                                    
-                                    item.save(function (err ,itemObj) {
-                                        var history = new histories();
-                                        history.item_id = item._id;
-                                        history.collection_id = item.collection_id._id
-                                        history.from_id = receiver._id;
-                                        history.to_id = sender._id
-                                        history.transaction_hash = transaction_hash
-                                        history.history_type = "transfer";
-                                        history.price = item.price;
-                                        history.save(function (err ,historyObj) {
-                                            var price = new prices();
-                                            price.item_id = item._id;
-                                            price.price = item.price;
-                                            price.user_id = sender._id
-                                            price.save(function (err ,priceObj) {
-                                                res.json({
-                                                    status: true,
-                                                    message: "Item Transfer successfully",
-                                                    result: itemObj
-                                                });
+                                item.save(function (err ,itemObj) {
+                                    if (err) {
+                                        res.status(400).json({
+                                            status: false,
+                                            message: "Request failed",
+                                            errors:err
+                                        });
+                                        return;
+                                    }
+                                    var history = new histories();
+                                    history.item_id = item.item_id;
+                                    history.collection_id = item.collection_id;
+                                    history.from_address = prev_owner;
+                                    history.to_address = req.decoded.public_key
+                                    history.transaction_hash = req.body.transaction_hash
+                                    history.history_type = "transfer";
+                                    history.price = item.price;
+                                    history.save(function (err ,historyObj) {
+                                        if (err) {
+                                            res.status(400).json({
+                                                status: false,
+                                                message: "Request failed",
+                                                errors:err
                                             });
-    
+                                            return;
+                                        }
+                                        var price = new prices();
+                                        price.item_id = item.item_id;
+                                        price.price = item.price;
+                                        price.user_address = req.decoded.public_key;
+                                        price.save(function (err ,priceObj) {
+                                            if (err) {
+                                                res.status(400).json({
+                                                    status: false,
+                                                    message: "Request failed",
+                                                    errors:err
+                                                });
+                                                return;
+                                            }
+                                            res.json({
+                                                status: true,
+                                                message: "Item Transfered successfully",
+                                                result: itemObj
+                                            });
                                         });
                                     });
-                                    })
-                                    });
-                                }
-                            });
-    
-                        });
-                    })
-
-                })
-            })
-        });
+                                });
+                            })
+                        }
+                    });        
+                }
+            });
+        }
     });
 }
 
