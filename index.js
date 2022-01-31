@@ -20,6 +20,7 @@ var collection = require("./module/collection/route/collection");
 var media = require("./module/media/route/media");
 var settings = require("./module/common/route/settings");
 var item = require("./module/item/route/item");
+var auction = require("./module/auction/route/auction");
 
 var mongoose = require("mongoose");
 var cors = require("cors");
@@ -76,6 +77,7 @@ app.use("/media", media);
 app.use("/category", category);
 app.use("/collection", collection);
 app.use("/item", item);
+app.use("/auction", auction);
 
 /*
  * Below lines used to handle invalid api calls

@@ -166,7 +166,7 @@ exports.getListByIds = async function(req, res) {
  *  This is the function which used to retreive user detail by user's public key
  */
 exports.details = function(req, res) {
-    console.log("received params are ", req.query);
+    // console.log("received params are ", req.query);
     users
         .findOne({
             public_key: req.query.public_key
@@ -866,7 +866,7 @@ exports.update = function(req, res) {
     if (req.body.username) {
         params["username"] = req.body.username;
     }
-    console.log("params are ", params);
+    // console.log("params are ", params);
     query = users.find(params);
     query.exec(function(err, data) {
         if (req.body.email || req.body.username) {
@@ -878,7 +878,7 @@ exports.update = function(req, res) {
                 });
                 return;
             }
-            console.log("user data are ", data);
+            // console.log("user data are ", data);
             if (data.length > 0) {
                 res.status(401).json({
                     status: false,
@@ -933,7 +933,7 @@ exports.update = function(req, res) {
                         user.profile_cover = req.body.profile_cover ?
                             req.body.profile_cover :
                             user.profile_cover;
-                        user.email = req.body.email ? req.body.email : user.email;
+                        // user.email = req.body.email ? req.body.email : user.email;
                         // user.username = req.body.username ? req.body.username : user.username;
                         user.bio = req.body.bio ? req.body.bio : user.bio;
                         user.facebook_username = req.body.facebook_username ?

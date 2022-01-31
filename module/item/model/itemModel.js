@@ -121,24 +121,33 @@ var itemSchema = mongoose.Schema({
         // ref: 'collection',
         required: [ true , 'Collection_keyword is required'],
     },
-    current_owner: { 
-        type: String, 
-        // ref: 'users',
-        required: [ true , 'Current_owner is required'],
-    },
     creator_address: { 
         type: String, 
         // ref: 'users',
         required: [ true , 'Creator_address is required'],
     },
+    creator_image:{
+        type:String,
+        // required: [ true , 'creator_image is required']
+    },
+    creator_name: {
+        type: String,
+        required: [ true , 'creator_name is required']
+    },
+    current_owner: { 
+        type: String, 
+        // ref: 'users',
+        required: [ true , 'Current_owner is required'],
+    },
     owner_image:{
         type: String, 
         // ref: 'users',
-        required: [ true , 'Owner_image is required'],
+        // required: [ true , 'Owner_image is required'],
     },
-    creator_image:{
-        type:String,
-        required: [ true , 'creator_image is required']
+    current_owner_name: { 
+        type: String, 
+        // ref: 'users',
+        required: [ true , 'Current_owner_name is required'],
     },
     status:{
         type: Boolean,
@@ -152,6 +161,10 @@ var itemSchema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    is_on_auction: {
+        type: Boolean,
+        default: false
+    }
 });
 
 itemSchema.plugin(uniqueValidator);

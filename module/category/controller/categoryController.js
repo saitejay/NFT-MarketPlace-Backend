@@ -34,7 +34,7 @@ exports.getList = async function(req,res) {
 *  This is the function which used to retreive category detail by category id
 */
 exports.details = function(req,res) {
-    console.log("received params are ", req.params)
+    // console.log("received params are ", req.params)
     categories.findOne({_id:req.query.category_id}).exec( function (err, category) {
         if (err) {
             res.json({
