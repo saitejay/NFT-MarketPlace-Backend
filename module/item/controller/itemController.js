@@ -53,6 +53,7 @@ exports.add = function(req,res) {
     item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : Boolean;
     item.media = req.body.media ? req.body.media : '';
     item.thumb = req.body.thumb ? req.body.thumb : '';
+    item.item_hash = req.body.item_hash ? req.body.item_hash : '';
     item.external_link = req.body.external_link ? req.body.external_link : '';
     item.attributes = req.body.attributes ? req.body.attributes : [];
     item.levels = req.body.levels ? req.body.levels : [];
@@ -137,6 +138,7 @@ exports.update = function(req,res) {
         item.price = req.body.price ?  req.body.price : item.price;
         item.media = req.body.media ?  req.body.media : item.media;
         item.thumb = req.body.thumb ?  req.body.thumb : item.thumb;
+        item.item_hash = req.body.item_hash ? req.body.item_hash : item.item_hash;
         item.external_link = req.body.external_link ?  req.body.external_link : item.external_link;
         item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : item.unlock_content_url;
         item.attributes = req.body.attributes ?  req.body.attributes : item.attributes;
@@ -276,7 +278,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name',
+            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
             page:page,
             offset:offset,
             limit:10,    
@@ -284,7 +286,7 @@ exports.list = function(req,res) {
     } else {
         // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
             page:page,
             offset:offset,
             limit:10,    

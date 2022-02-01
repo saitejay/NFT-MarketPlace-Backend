@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : itemModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define collection schema that will communicate and process collection information with mongodb through mongoose ODM.
 */
 
 var mongoose = require('mongoose');
@@ -44,13 +40,17 @@ var itemSchema = mongoose.Schema({
     }, 
     media: {
         type: String,
-        unique: [ true , 'Media already exists. Please try a different media'],
+        // unique: [ true , 'Media already exists. Please try a different media'],
         required: [ true , 'Media is required'],
     },
     thumb: {
         type: String,
-        unique: [ true , 'Thumb already exists. Please try a different thumb'],
+        // unique: [ true , 'Thumb already exists. Please try a different thumb'],
         required: [ true , 'Thumb is required'],
+    },
+    item_hash: {
+        type: String,
+        required: [ true , 'Item_hash is required'],
     },
     has_offer: {
         type: Boolean,
