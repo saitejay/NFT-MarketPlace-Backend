@@ -116,6 +116,14 @@ var itemSchema = mongoose.Schema({
         // ref: 'collection',
         required: [ true , 'Collection_id is required'],
     },
+    collection_name: {
+        type: String,
+        required: [ true, 'Collection_name is required']
+    },
+    royalties: {
+        type: Number,
+        required: [ true, 'Royalties is required']
+    },
     collection_keyword: {
         type: String,
         // ref: 'collection',

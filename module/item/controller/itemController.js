@@ -67,6 +67,8 @@ exports.add = function(req,res) {
             });
             return;
         }
+        item.collection_name = collection.name;
+        item.royalties = collection.royalties;
         item.collection_address = collection.collection_address;
         users.findOne({public_key: req.decoded.public_key}, function(err, userdetails){
             if (err) {
@@ -231,17 +233,13 @@ exports.list = function(req,res) {
        query = query.or(search)
     }    
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
-        
-            query = query.where({ 
-                
+            query = query.where({
                      $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': true},{
                          $and:[{'current_owner':req.decoded.public_key, 'status': false}] 
                         }]
                     }]
-                }                
+                }               
             ).sort('-create_date') 
-        
-
     } else if(req.query.type == "view" && req.decoded.public_key != null) {
         query = query.where('_id', req.query._id);
     } else {
@@ -260,7 +258,7 @@ exports.list = function(req,res) {
         } else if(req.query.type == "view") { 
             query = query.where('_id',req.query._id);
         } else if(req.query.type == "offer") { 
-            query = query.where('has_offer',true);
+            query = query.where('has_offer',false);
         } else if(req.query.type == "collection") {
             query = query.where('collection_keyword',req.query.collection_keyword);
         } else if(req.query.type == "category") { 
@@ -278,7 +276,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
+            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
             page:page,
             offset:offset,
             limit:10,    
@@ -286,7 +284,7 @@ exports.list = function(req,res) {
     } else {
         // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
             page:page,
             offset:offset,
             limit:10,    
@@ -659,16 +657,36 @@ exports.pricelist = function(req,res) {
 * This is the function which used to get more from collection for item detail page
 */
 exports.moreFromCollection = function(req,res) {
-
-    query = users.find({ '_id' : { $nin : [req.query.item_id] }});
-    var recentquery  = items.find({collection_id:req.query.collection_id, status:'active', '_id' : { $nin : [req.query.item_id] }}).select('name description thumb like_count create_date status price');
-    recentquery = recentquery.sort('-create_date').limit(5)
-    recentquery.exec(function(err,recentresult){
-        res.json({
-            status: true,
-            message: "Collection Item retrieved successfully",
-            data: recentresult
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
         });
+        return;
+    } 
+    var recentquery  = items.find({"collection_id":req.query.collection_id, "status":true,  '_id' : { $nin : [req.query._id] }});
+    recentquery = recentquery.sort('-create_date').limit(4)
+    recentquery.exec(function(err, recentresult){
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+        }else if (!recentresult[0]) {
+            res.status(404).json({
+                status: false,
+                message: "Items not found"
+            });
+        }else{
+            res.json({
+                status: true,
+                message: "Collection Item retrieved successfully",
+                data: recentresult
+            });
+        }
     })
 }
 
@@ -901,36 +919,74 @@ exports.listFavourite = function(req,res) {
 * This is the function which used to add views for user
 */
 exports.addViews = function(req,res) {
-    items.findOne({_id:req.body.item_id, status:"active"}, function (err, item) {
-        if (err || !item) {
-            res.json({
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    } 
+    items.findOne({_id:req.body._id, status:"true"}, function (err, item) {
+        if (err) {
+            res.status(400).json({
                 status: false,
-                message: "Item not found",
+                message: "Request failed",
                 errors:err
             });
             return;
-        }
-        views.findOne({item_id:req.body.item_id, user_id:req.decoded.user_id}, function (err, view) {
-            if (!view) {
-                item.view_count = item.view_count + 1;
-                var newview = new views();
-                newview.user_id = req.decoded.user_id;
-                newview.item_id = req.body.item_id;
-                newview.save(function(err,result){
-                    item.save(function(err,result){
-                        res.json({
-                            status: true,
-                            message: "View added successfully",
-                        });
+        }else if (!item) {
+            res.status(404).json({
+                status: false,
+                message: "Item not found"
+            });
+            return;
+        }else {
+            views.findOne({item_id: req.body._id, user_address:req.decoded.public_key}, function (err, view) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                } else if (!view) {
+                    item.view_count = item.view_count + 1;
+                    var newview = new views();
+                    newview.user_address = req.decoded.public_key;
+                    newview.item_id = req.body._id;
+                    newview.save(function(err,result){
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors:err
+                            });
+                        } else {
+                            item.save(function(err,result){
+                                if (err) {
+                                    res.status(400).json({
+                                        status: false,
+                                        message: "Request failed",
+                                        errors:err
+                                    });
+                                } else {
+                                    res.json({
+                                        status: true,
+                                        message: "View added successfully",
+                                    });
+                                }
+                            })
+                        }  
                     })
-                })
-            } else {
-                res.json({
-                    status: true,
-                    message: "View added successfully",
-                });
-            }
-        })
+                } else {
+                    res.json({
+                        status: true,
+                        message: "View added successfully",
+                    });
+                }
+            });
+        }
         
     });
 }
@@ -939,11 +995,20 @@ exports.addViews = function(req,res) {
 * This is the function which used to list user who recently view the item
 */
 exports.recentlyViewed = function(req,res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    } 
     var page = req.query.page ? req.query.page : '1';  
     var query = views.find();
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
     query = query.where('item_id',req.query.item_id)
-    query = query.where('user_id',req.query.user_id)
+    query = query.where('user_address',req.query.user_address)
     query = query.sort('-created_date')
     var options = {
     page:page,
@@ -951,12 +1016,19 @@ exports.recentlyViewed = function(req,res) {
     limit:15,    
     };  
     views.paginate(query, options).then(function (result) {
-        res.json({
-            status: true,
-            message: "Views retrieved successfully",
-            data: result
-        });
-    }); 
+        if(!result.docs[0]){
+            res.json({
+                status: false,
+                message: "Views not found",
+            });
+        } else {
+            res.json({
+                status: true,
+                message: "Views retrieved successfully",
+                data: result
+            });
+        }
+    });
 }
 
 /*
