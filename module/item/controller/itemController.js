@@ -337,7 +337,50 @@ exports.list = function(req,res) {
     }); 
 }
 
-
+exports.mint_token = function (req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: false}, function (err, itemObj) {
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors:err
+            });
+            return;
+        }else if(!itemObj){
+            res.status(404).json({
+                status: false,
+                message: "Item not found"
+            });
+        }else{
+            itemObj.minted_date = new Date();
+            itemObj.token_id = req.body.token_id;
+            itemObj.save(function (err, result) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors:err
+                    });
+                    return;
+                }
+                res.json({
+                    status: true,
+                    message: "Item minted successfully",
+                    result: result
+                });
+            })
+        }
+    })
+}
 
 
 /*
@@ -354,7 +397,7 @@ exports.publish = function(req,res) {
         return;
     }
     items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status: false}, 
-                            {'$set': {item_id: req.body.item_id, token_id : req.body.token_id, minted_date: new Date(), status: true}}, (err, item) => {
+                            {'$set': {item_id: req.body.item_id, status: true}}, (err, item) => {
         if (err) {
             res.status(400).json({
                 status: false,
