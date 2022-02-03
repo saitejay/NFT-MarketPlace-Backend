@@ -120,7 +120,7 @@ exports.update = function(req,res) {
     }  
     // console.log("item id ",req.body.item_id);
     // console.log("creator_address ",req.decoded.public_key);
-    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: false}, function (err, item) {
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: 'created'}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -180,7 +180,7 @@ exports.delete = function(req,res) {
         });
         return;
     }
-    items.findOne({_id:req.body._id, creator_address:req.decoded.public_key, status: false}, function (err, item) {
+    items.findOne({_id:req.body._id, creator_address:req.decoded.public_key, status: 'created'}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -233,9 +233,10 @@ exports.list = function(req,res) {
        query = query.or(search)
     }    
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
+        // $and: [{'collection_keyword': req.query.collection_keyword, 'current_owner': req.decoded.public_key}]
             query = query.where({
-                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': true},{
-                         $and:[{'current_owner':req.decoded.public_key, 'status': false}] 
+                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'published'},{
+                         $and:[{'current_owner':req.decoded.public_key, $or: [{'status':'created'},{'status':'minted'}]}] 
                         }]
                     }]
                 }               
@@ -246,10 +247,10 @@ exports.list = function(req,res) {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
             } else {
-                query = query.where('status', true);
+                query = query.where('status', "published");
             }
         } else {
-            query = query.where('status', true);
+            query = query.where('status', "published");
         }
         if(req.query.type == "my") {
             query = query.where('creator_address',req.decoded.public_key).sort('-create_date');
@@ -347,7 +348,7 @@ exports.mint_token = function (req, res) {
         });
         return;
     }
-    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: false}, function (err, itemObj) {
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: "created"}, function (err, itemObj) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -361,6 +362,7 @@ exports.mint_token = function (req, res) {
                 message: "Item not found"
             });
         }else{
+            itemObj.status = "minted";
             itemObj.minted_date = new Date();
             itemObj.token_id = req.body.token_id;
             itemObj.save(function (err, result) {
@@ -396,8 +398,8 @@ exports.publish = function(req,res) {
         });
         return;
     }
-    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status: false}, 
-                            {'$set': {item_id: req.body.item_id, status: true}}, (err, item) => {
+    items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status: "minted"}, 
+                            {'$set': {item_id: req.body.item_id, status: "published"}}, (err, item) => {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -427,7 +429,7 @@ exports.publish = function(req,res) {
                     price.item_id = req.body.item_id;
                     price.price = item.price;
                     price.user_address = user.public_key;
-                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:true}, function(err,itemObj){
+                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:"published"}, function(err,itemObj){
                         price.save(function (err ,priceObj) {
                             // console.log(priceObj);
                             res.json({
@@ -460,7 +462,7 @@ exports.updatePrice = function(req,res){
         return;
     }
 
-    items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
+    items.findOne({_id:req.body.item_id, status:"published"}).populate('collection_id').exec(function (err, item) {
         if (err || !item) {
             res.json({
                 status: false,
@@ -509,7 +511,7 @@ exports.purchase = function(req,res) {
         });
         return;
     } 
-    items.findOne({item_id:req.body.item_id, status:true, is_on_auction: false}).exec(function (err, item) {
+    items.findOne({item_id:req.body.item_id, status:"published", is_on_auction: false}).exec(function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -709,7 +711,7 @@ exports.moreFromCollection = function(req,res) {
         });
         return;
     } 
-    var recentquery  = items.find({"collection_id":req.query.collection_id, "status":true,  '_id' : { $nin : [req.query._id] }});
+    var recentquery  = items.find({"collection_id":req.query.collection_id, "status":"published",  '_id' : { $nin : [req.query._id] }});
     recentquery = recentquery.sort('-create_date').limit(4)
     recentquery.exec(function(err, recentresult){
         if (err) {
@@ -739,15 +741,15 @@ exports.moreFromCollection = function(req,res) {
 exports.listByCollection = function(req,res) {
     var result = {
     };
-    var recentquery  = items.find({collection_id:req.query.collection_id, status:'active'}).select('name description thumb like_count create_date status price');
+    var recentquery  = items.find({collection_id:req.query.collection_id, status:'true'}).select('name description thumb like_count create_date status price');
     recentquery = recentquery.sort('-create_date').limit(5)
     recentquery.exec(function(err,recentresult){
        result["recent"] = recentresult;
-       var mintedquery  = items.find({collection_id:req.query.collection_id, status:'active'}).select('name description thumb like_count create_date status price');
+       var mintedquery  = items.find({collection_id:req.query.collection_id, status:'true'}).select('name description thumb like_count create_date status price');
        mintedquery = mintedquery.sort('-minted_date').limit(5)
        mintedquery.exec(function(err,mintedresult){
          result["minted"] = mintedresult;
-         var autcionquery  = items.find({collection_id:req.query.collection_id, status:'active', has_offer: true}).select('name description thumb like_count create_date status price');
+         var autcionquery  = items.find({collection_id:req.query.collection_id, status:'true', has_offer: true}).select('name description thumb like_count create_date status price');
          autcionquery = autcionquery.sort('-create_date').limit(5)
          autcionquery.exec(function(err,auctionresult){
            result["onauction"] = auctionresult;
@@ -878,16 +880,21 @@ exports.listByCollection = function(req,res) {
 * This is the function which used to list item in database
 */
 exports.actionFavourite = function(req,res) {
-    items.findOne({_id:req.body.item_id, status:"active"}, function (err, item) {
-        if (err || !item) {
-            res.json({
+    items.findOne({_id:req.body._id, status: "published"}, function (err, item) {
+        if (err) {
+            res.status(400).json({
                 status: false,
-                message: "Item not found",
+                message: "Request failed",
                 errors:err
             });
             return;
+        }else if(!item){
+            res.status(404).json({
+                status: false,
+                message: "Item not found",
+            })
         }
-        favourites.findOne({item_id:req.body.item_id, user_id:req.decoded.user_id}, function (err, favourite) {
+        favourites.findOne({item_id:req.body._id, user_address:req.decoded.user_address}, function (err, favourite) {
             if(req.body.type == "increase") {
                 if (!favourite) {
                     item.like_count = item.like_count + 1;
@@ -926,9 +933,7 @@ exports.actionFavourite = function(req,res) {
                     })
                 }
             }
-            
         })
-        
     });
 }
 
@@ -971,7 +976,7 @@ exports.addViews = function(req,res) {
         });
         return;
     } 
-    items.findOne({_id:req.body._id, status:"true"}, function (err, item) {
+    items.findOne({_id:req.body._id, status:"published"}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -1029,8 +1034,7 @@ exports.addViews = function(req,res) {
                     });
                 }
             });
-        }
-        
+        }        
     });
 }
 

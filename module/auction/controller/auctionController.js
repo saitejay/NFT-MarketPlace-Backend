@@ -517,7 +517,7 @@ exports.paybackOnAuction = function (req, res) {
                         message: "Bid not found"
                     }); 
                 } else {
-                    items.findOne({item_id:auctionObj.item_id, status:true, is_on_auction: true}).exec(function (err, item) {
+                    items.findOne({item_id:auctionObj.item_id, status:"published", is_on_auction: true}).exec(function (err, item) {
                         if (err) {
                             res.status(400).json({
                                 status: false,

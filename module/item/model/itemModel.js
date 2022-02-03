@@ -158,9 +158,9 @@ var itemSchema = mongoose.Schema({
         required: [ true , 'Current_owner_name is required'],
     },
     status:{
-        type: Boolean,
-        // enum : ['active','inactive'],
-        default: false
+        type: String,
+        enum : ['created','minted', 'published'],
+        default: 'created'
     },
     minted_date: {
         type: Date,
