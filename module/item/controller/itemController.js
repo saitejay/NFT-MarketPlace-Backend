@@ -276,7 +276,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
+            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id',
             page:page,
             offset:offset,
             limit:10,    
@@ -284,7 +284,7 @@ exports.list = function(req,res) {
     } else {
         // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id',
             page:page,
             offset:offset,
             limit:10,    
