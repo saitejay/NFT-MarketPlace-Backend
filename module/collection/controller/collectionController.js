@@ -15,6 +15,7 @@ var fs = require('fs');
 const { collection } = require('../model/collectionModel')
 const { Console } = require('console');
 const itemModel = require('../../item/model/itemModel');
+const userModel = require('../../user/model/userModel');
 /*
 * This is the function which used to add collection in database
 */
@@ -42,21 +43,25 @@ exports.add = function(req,res) {
     collection.author_address = req.decoded.public_key;
     collection.collection_address = req.body.collection_address;
     collection.contract_symbol = req.body.token_symbol;
-    collection.save(function (err ,collectionObj) {
-        if (err) {
-            res.status(401).json({
-                status: false,
-                message: "Request failed",
-                errors:err
+    userModel.findOne({public_key: req.decoded.public_key}, function (err, userObj) {
+        collection.creator_name = userObj.username;
+        collection.creator_image = userObj.profile_image;
+        collection.save(function (err ,collectionObj) {
+            if (err) {
+                res.status(401).json({
+                    status: false,
+                    message: "Request failed",
+                    errors:err
+                });
+                return;
+            }
+            res.status(200).json({
+                status: true,
+                message: "Collection created successfully",
+                result: collectionObj
             });
-            return;
-        }
-        res.status(200).json({
-            status: true,
-            message: "Collection created successfully",
-            result: collectionObj
         });
-    });
+    })
 }
 
 /*

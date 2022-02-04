@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
-FileName : collectionModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define collection schema that will communicate and process collection information with mongodb through mongoose ODM.
+Project : NFT-marketplace
+FileName : collectionController.js
 */
 
 var mongoose = require('mongoose');
@@ -72,6 +68,14 @@ var collectionSchema = mongoose.Schema({
     author_address: { 
         type: String, 
         required:[true, 'Author_address is required'] 
+    },
+    creator_name: {
+        type: String,
+        required: [true, 'Creator_name is required']
+    },
+    creator_image: {
+        type: String,
+        required: [true, 'Create_image is required']
     },
     create_date: {
         type: Date,
