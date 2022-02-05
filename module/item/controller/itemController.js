@@ -215,7 +215,8 @@ exports.delete = function(req,res) {
 /*
 * This is the function which used to list item in database
 */
-exports.list = function(req,res) {
+exports.list = function(req,res) 
+{
     var keyword = req.query.keyword ? req.query.keyword : ''; 
     keyword = keyword.replace("+"," ");     
     var page = req.query.page ? req.query.page : '1';  
@@ -234,31 +235,87 @@ exports.list = function(req,res) {
     }    
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
         // $and: [{'collection_keyword': req.query.collection_keyword, 'current_owner': req.decoded.public_key}]
-            query = query.where({
-                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'active'},{
-                         $and:[{'current_owner':req.decoded.public_key, $or: [{'status':'created'},{'status':'minted'},{'status':'inactive'}]}] 
-                        }]
-                    }]
-                }               
+            query = query.where(
+                {
+                     $and: [
+                         {'collection_keyword':req.query.collection_keyword, 
+                         $or: [
+                             {'status': 'active'},
+                             {
+                                $and:[
+                                    {'current_owner':req.decoded.public_key, 
+                                    $or: [
+                                        {'status':'inactive'}
+                                        ]
+                                    }
+                                ]                                
+                            },
+                            {
+                                $and:[
+                                    {'creator_address':req.decoded.public_key, 
+                                    $or: [
+                                        {'status':'created'},{'status':'minted'},{'status':'inactive'}
+                                        ]
+                                    }
+                                ]    
+                            }
+                        ]
+                    }
+                ]
+                }              
             ).sort('-create_date') 
-    } else if(req.query.type == "view" && req.decoded.public_key != null) {
-        query = query.where('_id', req.query._id);
-    } else {
-        if(req.query.user && req.decoded.public_key != null) {
-            if(req.decoded.role == 1 && req.query.user == "admin") {
-            } else {
-                query = query.where('status', "active");
-            }
-        } else {
-            query = query.where('status', "active");
-        }
+    } else if(req.query.type == "view") {
+        query = query.where(
+            {
+                $and: [
+                    {'_id':req.query._id, 
+                    $or: [
+                        {'status': 'active'},
+                        {
+                           $and:[
+                               {'current_owner':req.decoded.public_key, 
+                               $or: [
+                                   {'status':'active'},{'status':'inactive'}
+                                   ]
+                               }
+                           ]                                
+                       },
+                       {
+                           $and:[
+                               {'creator_address':req.decoded.public_key, 
+                               $or: [
+                                   {'status':'created'},{'status':'minted'},{'status':'inactive'}
+                                   ]
+                               }
+                           ]    
+                       }
+                   ]
+               }
+           ]
+           } 
+        );
+    } else 
+    {
+        // if(req.query.user && req.decoded.public_key != null) {
+        //     if(req.decoded.role == 1 && req.query.user == "admin") {
+        //     } else {
+        //         query = query.where('status', "active");
+        //     }
+        // } 
+        // else {
+        //     query = query.where('status', "active");
+        // }
+        
+        
         if(req.query.type == "my") {
-            query = query.where('creator_address',req.decoded.public_key).sort('-create_date');
+            query = query.where({"creator_address": req.decoded.public_key}).sort('-create_date');
         }else if(req.query.type == "collected") {
             query = query.where('current_owner',req.decoded.public_key).sort('-create_date');
-        } else if(req.query.type == "view") { 
-            query = query.where('_id',req.query._id);
-        } else if(req.query.type == "offer") { 
+        }
+        //  else if(req.query.type == "view") { 
+        //     query = query.where('_id', req.query._id, 'status', "active");
+        // }
+         else if(req.query.type == "offer") { 
             query = query.where('has_offer',false);
         } else if(req.query.type == "collection") {
             query = query.where('collection_keyword',req.query.collection_keyword);
@@ -271,7 +328,7 @@ exports.list = function(req,res) {
         } else if(req.query.type == "mostliked") {
             query = query.sort('-like_count')
         }else {
-            query = query.sort('-create_date')
+            query = query.where('status', "active").sort('-create_date')
         }
     }
     var options;
