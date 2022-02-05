@@ -18,7 +18,7 @@ const { check } = require('express-validator');
 router.get('/',auctionController.test)
 router.post('/add', [check('auction_id').not().isEmpty(), check('item_id').not().isEmpty(), check('auction_start_time').not().isEmpty(), check('auction_end_time').not().isEmpty(), auth], auctionController.add)
 router.get('/livelist', auctionController.auctionLiveList)
-router.post('/details',[check('auction_id').not().isEmpty(), auth], auctionController.details)
+router.get('/details', auctionController.details)
 router.get('/listall', auctionController.ListAllAuctions)
 router.post('/placebid',[check('bid_id').not().isEmpty(), check('auction_id').not().isEmpty(), check('bid_amount').not().isEmpty(), auth], auctionController.placeBid)
 router.get('/bidsinauction', auctionController.listBidsInAuction)
