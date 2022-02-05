@@ -13,7 +13,7 @@ const config = require('./../helper/config');
 let adminauth = (req, res, next) => {
   let token = req.headers['x-access-token'] || req.headers['authorization']; 
   if(token == null) {
-    return res.status(404).json({
+    return res.status(401).json({
         status: false,
         message: 'Auth token is not supplied'
       }); 
@@ -26,13 +26,13 @@ let adminauth = (req, res, next) => {
   if (token) {
     jwt.verify(token, config.secret_key, (err, decoded) => {
       if (err) {
-        return res.status(404).json({
+        return res.status(401).json({
           status: false,
           message: 'Token is not valid'
         });
       } else {
         if(decoded.role != 1) {
-            return res.status(404).json({
+            return res.status(401).json({
                 status: false,
                 message: "Access denied. you didn't have permission to access this end point"
               });
@@ -42,7 +42,7 @@ let adminauth = (req, res, next) => {
       }
     });
   } else {
-    return res.status(404).json({
+    return res.status(401).json({
       status: false,
       message: 'Auth token is not supplied'
     });
