@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : favouriteModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define favourite schema that will store and reterive item favourite information.
 */
 
 var mongoose = require('mongoose');
@@ -19,8 +15,8 @@ var favouriteSchema = mongoose.Schema({
         // ref: 'item' 
     },
     user_address: { 
-        type: Schema.Types.ObjectId, 
-        ref: 'users' 
+        type: String, 
+        // ref: 'users' 
     },
     created_date: {
         type: Date,
