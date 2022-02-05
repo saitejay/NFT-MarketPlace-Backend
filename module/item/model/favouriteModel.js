@@ -14,8 +14,14 @@ var config = require('./../../../helper/config')
 const Schema = mongoose.Schema;
 
 var favouriteSchema = mongoose.Schema({
-    item_id: { type: Schema.Types.ObjectId, ref: 'item' },
-    user_id: { type: Schema.Types.ObjectId, ref: 'users' },
+    item_id: { 
+        type: String, 
+        // ref: 'item' 
+    },
+    user_address: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'users' 
+    },
     created_date: {
         type: Date,
         default: Date.now

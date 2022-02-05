@@ -73,7 +73,9 @@ exports.add = function(req,res) {
                     });
                     return;
                 }
+                itemObj.status = "active";
                 itemObj.is_on_auction = true;
+                itemObj.auction_id = req.body.auction_id;
                 itemObj.save(function (err, item) {
                     if (err) {
                         res.status(401).json({
@@ -419,7 +421,7 @@ exports.closingAuction = function(req, res){
                     return;
                 }
                 if (auctionObj1.number_of_bids == 0) {
-                    items.findOneAndUpdate({item_id: auctionObj1.item_id}, {is_on_auction: false}, function (err, item) {
+                    items.findOneAndUpdate({item_id: auctionObj1.item_id}, {is_on_auction: false, status: "inactive", auction_id: 0}, function (err, item) {
                         if (err) {
                             res.status(401).json({
                                 status: false,
@@ -517,7 +519,7 @@ exports.paybackOnAuction = function (req, res) {
                         message: "Bid not found"
                     }); 
                 } else {
-                    items.findOne({item_id:auctionObj.item_id, status:"published", is_on_auction: true}).exec(function (err, item) {
+                    items.findOne({item_id:auctionObj.item_id, status:"active", is_on_auction: true}).exec(function (err, item) {
                         if (err) {
                             res.status(400).json({
                                 status: false,
@@ -552,6 +554,8 @@ exports.paybackOnAuction = function (req, res) {
                                     item.owner_image = user.profile_image;
                                     item.current_owner_name = user.username;
                                     item.is_on_auction = false;
+                                    item.status = "inactive";
+                                    item.auction_id = 0;
                                     collections.findOne({collection_id:item.collection_id},function(err, collection){
                                         if (err) {
                                             res.status(400).json({

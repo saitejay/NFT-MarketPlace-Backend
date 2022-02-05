@@ -79,7 +79,7 @@ var auctionSchema = mongoose.Schema({
     },
     auction_owner_image: {
         type: String,
-        required: [ true , 'Auction_owner_image is required']
+        // required: [ true , 'Auction_owner_image is required']
     },
     auction_owner_name: {
         type: String,

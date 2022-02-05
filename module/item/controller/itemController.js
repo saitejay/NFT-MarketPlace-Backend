@@ -235,8 +235,8 @@ exports.list = function(req,res) {
     if(req.query.type == "mycollection" && req.decoded.public_key != null) {
         // $and: [{'collection_keyword': req.query.collection_keyword, 'current_owner': req.decoded.public_key}]
             query = query.where({
-                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'published'},{
-                         $and:[{'current_owner':req.decoded.public_key, $or: [{'status':'created'},{'status':'minted'}]}] 
+                     $and: [{'collection_keyword':req.query.collection_keyword, $or: [{'status': 'active'},{
+                         $and:[{'current_owner':req.decoded.public_key, $or: [{'status':'created'},{'status':'minted'},{'status':'inactive'}]}] 
                         }]
                     }]
                 }               
@@ -247,10 +247,10 @@ exports.list = function(req,res) {
         if(req.query.user && req.decoded.public_key != null) {
             if(req.decoded.role == 1 && req.query.user == "admin") {
             } else {
-                query = query.where('status', "published");
+                query = query.where('status', "active");
             }
         } else {
-            query = query.where('status', "published");
+            query = query.where('status', "active");
         }
         if(req.query.type == "my") {
             query = query.where('creator_address',req.decoded.public_key).sort('-create_date');
@@ -277,7 +277,7 @@ exports.list = function(req,res) {
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id',
+            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id is_on_auction auction_id',
             page:page,
             offset:offset,
             limit:10,    
@@ -285,7 +285,7 @@ exports.list = function(req,res) {
     } else {
         // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
         options = {
-            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id',
+            select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id is_on_auction auction_id',
             page:page,
             offset:offset,
             limit:10,    
@@ -399,7 +399,7 @@ exports.publish = function(req,res) {
         return;
     }
     items.findOneAndUpdate({_id:req.body._id, creator_address: req.decoded.public_key, status: "minted"}, 
-                            {'$set': {item_id: req.body.item_id, status: "published"}}, (err, item) => {
+                            {'$set': {item_id: req.body.item_id, status: "active"}}, (err, item) => {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -429,7 +429,7 @@ exports.publish = function(req,res) {
                     price.item_id = req.body.item_id;
                     price.price = item.price;
                     price.user_address = user.public_key;
-                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:"published"}, function(err,itemObj){
+                    items.findOne({_id:req.body._id, creator_address: req.decoded.public_key, status:"active"}, function(err,itemObj){
                         price.save(function (err ,priceObj) {
                             // console.log(priceObj);
                             res.json({
@@ -462,7 +462,7 @@ exports.updatePrice = function(req,res){
         return;
     }
 
-    items.findOne({_id:req.body.item_id, status:"published"}).populate('collection_id').exec(function (err, item) {
+    items.findOne({_id:req.body.item_id, status:"active"}).populate('collection_id').exec(function (err, item) {
         if (err || !item) {
             res.json({
                 status: false,
@@ -472,28 +472,22 @@ exports.updatePrice = function(req,res){
             return;
         }
         userController.getUserInfoByID(req.decoded.user_id,function(err,sender){
-
             item.price = req.body.price
             item.save(function (err , itemObj) {
-
                 var price = new prices();
                 price.item_id = itemObj._id;
                 price.price = itemObj.price;
                 price.user_id = sender._id
                 price.save(function (err ,priceObj) {
                     res.json({
-                    status: true,
-                    message: "Item price updated successfully",
-                    result: itemObj
-                        });
-                    })
-
+                        status: true,
+                        message: "Item price updated successfully",
+                        result: itemObj
+                    });
+                })
             })
-
         })
     })
-
-
 }
 
 
@@ -511,7 +505,7 @@ exports.purchase = function(req,res) {
         });
         return;
     } 
-    items.findOne({item_id:req.body.item_id, status:"published", is_on_auction: false}).exec(function (err, item) {
+    items.findOne({item_id:req.body.item_id, status:"active", is_on_auction: false}).exec(function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -548,6 +542,7 @@ exports.purchase = function(req,res) {
                     });
                     return;
                 } else {
+                    item.status = "inactive";
                     item.current_owner = req.decoded.public_key;
                     item.owner_image = user.profile_image;
                     item.current_owner_name = user.username;
@@ -678,9 +673,9 @@ exports.history = function(req,res) {
 */
 exports.pricelist = function(req,res) {
     var page = req.query.page ? req.query.page : '1';  
-    var query = prices.find({'item_id':req.query.item_id});
+    var query = prices.find({'item_id': req.query.item_id});
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
-    query = query.populate({path: 'user_id', model: users, select:'_id username first_name last_name profile_image' })
+    query = query.populate({path: 'user_id', model: users, select:'_id username profile_image' })
     query = query.sort('-created_date')
     var options = {
     page:page,
@@ -688,11 +683,18 @@ exports.pricelist = function(req,res) {
     limit:10,    
     };  
     prices.paginate(query, options).then(function (result) {
-        res.json({
-            status: true,
-            message: "Prices retrieved successfully",
-            data: result
-        });
+        if (!result.docs[0]) {
+            res.status(404).json({
+                status: false,
+                message: "Prices Not found"
+            });
+        } else{
+            res.json({
+                status: true,
+                message: "Prices retrieved successfully",
+                data: result
+            });
+        }
     }); 
 }
 
@@ -711,7 +713,7 @@ exports.moreFromCollection = function(req,res) {
         });
         return;
     } 
-    var recentquery  = items.find({"collection_id":req.query.collection_id, "status":"published",  '_id' : { $nin : [req.query._id] }});
+    var recentquery  = items.find({"collection_id":req.query.collection_id, "status":"active",  '_id' : { $nin : [req.query._id] }});
     recentquery = recentquery.sort('-create_date').limit(4)
     recentquery.exec(function(err, recentresult){
         if (err) {
@@ -739,17 +741,40 @@ exports.moreFromCollection = function(req,res) {
 * This is the function which used to check list item by collection for collection home page
 */
 exports.listByCollection = function(req,res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    } 
     var result = {
     };
-    var recentquery  = items.find({collection_id:req.query.collection_id, status:'true'}).select('name description thumb like_count create_date status price');
+    var recentquery  = items.find({collection_id:req.query.collection_id, status:'active'}).select('name description thumb like_count create_date status price');
     recentquery = recentquery.sort('-create_date').limit(5)
-    recentquery.exec(function(err,recentresult){
+    recentquery.exec(function(err, recentresult){
+        if(err){
+            res.status(400).send({
+                status: false,
+                message: "Request failed"
+            });
+        }else if(!recentresult){
+            res.status(404).send({
+                status: false,
+                message: "Not found"
+            });
+        }else{
+            console.log(recentresult);
+        }
+        
        result["recent"] = recentresult;
-       var mintedquery  = items.find({collection_id:req.query.collection_id, status:'true'}).select('name description thumb like_count create_date status price');
+       var mintedquery  = items.find({collection_id:req.query.collection_id, status:'active'}).select('name description thumb like_count create_date status price');
        mintedquery = mintedquery.sort('-minted_date').limit(5)
        mintedquery.exec(function(err,mintedresult){
          result["minted"] = mintedresult;
-         var autcionquery  = items.find({collection_id:req.query.collection_id, status:'true', has_offer: true}).select('name description thumb like_count create_date status price');
+         var autcionquery  = items.find({collection_id:req.query.collection_id, status:'active', has_offer: true}).select('name description thumb like_count create_date status price');
          autcionquery = autcionquery.sort('-create_date').limit(5)
          autcionquery.exec(function(err,auctionresult){
            result["onauction"] = auctionresult;
@@ -880,7 +905,7 @@ exports.listByCollection = function(req,res) {
 * This is the function which used to list item in database
 */
 exports.actionFavourite = function(req,res) {
-    items.findOne({_id:req.body._id, status: "published"}, function (err, item) {
+    items.findOne({_id:req.body._id, status: "active"}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,
@@ -893,47 +918,49 @@ exports.actionFavourite = function(req,res) {
                 status: false,
                 message: "Item not found",
             })
+        }else{
+            favourites.findOne({item_id:req.body._id, user_address:req.decoded.user_address}, function (err, favourite) {
+                if(req.body.type == "increase") {
+                    if (!favourite) {
+                        item.like_count = item.like_count + 1;
+                        var newfavourite = new favourites();
+                        newfavourite.user_address = req.decoded.user_address;
+                        newfavourite.item_id = req.body._id;
+                        newfavourite.save(function(err,result){
+                            item.save(function(err,result){
+
+                                res.json({
+                                    status: true,
+                                    message: "Favourites added successfully",
+                                });
+                            })
+                        })
+                    } else {
+                        res.status(404).json({
+                            status: false,
+                            message: "Favourites not found",
+                        });
+                    }
+                } else {
+                    if (!favourite) {
+                        res.status(404).json({
+                            status: false,
+                            message: "Favourites not found",
+                        });
+                    }else {
+                        item.like_count = item.like_count - 1;
+                        favourites.deleteOne({_id:favourite._id},function(err) {
+                            item.save(function(err,result){
+                                res.json({
+                                    status: true,
+                                    message: "Favourites removed successfully",
+                                });
+                            })
+                        })
+                    }
+                }
+            })
         }
-        favourites.findOne({item_id:req.body._id, user_address:req.decoded.user_address}, function (err, favourite) {
-            if(req.body.type == "increase") {
-                if (!favourite) {
-                    item.like_count = item.like_count + 1;
-                    var newfavourite = new favourites();
-                    newfavourite.user_id = req.decoded.user_id;
-                    newfavourite.item_id = req.body.item_id;
-                    newfavourite.save(function(err,result){
-                        item.save(function(err,result){
-                            res.json({
-                                status: true,
-                                message: "Favoruite added successfully",
-                            });
-                        })
-                    })
-                } else {
-                    res.json({
-                        status: true,
-                        message: "Favoruite added successfully",
-                    });
-                }
-            } else {
-                if (!favourite) {
-                    res.json({
-                        status: true,
-                        message: "Favoruite removed successfully",
-                    });
-                } else {
-                    item.like_count = item.like_count - 1;
-                    favourites.deleteOne({_id:favourite._id},function(err) {
-                        item.save(function(err,result){
-                            res.json({
-                                status: true,
-                                message: "Favoruite removed successfully",
-                            });
-                        })
-                    })
-                }
-            }
-        })
     });
 }
 
@@ -945,8 +972,8 @@ exports.listFavourite = function(req,res) {
     var page = req.query.page ? req.query.page : '1';  
     var query = favourites.find();
     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
-    query = query.where('user_id',req.query.user_id)
-    query = query.populate({path: 'item_id', model: items, select:'_id name thumb price' })
+    query = query.where('user_address',req.query.user_address)
+    query = query.populate({path: 'item_id', model: items, select:'_id name thumb price like_count' })
     query = query.sort('-created_date')
     var options = {
     page:page,
@@ -954,11 +981,19 @@ exports.listFavourite = function(req,res) {
     limit:15,    
     };  
     favourites.paginate(query, options).then(function (result) {
-        res.json({
-            status: true,
-            message: "Favourites retrieved successfully",
-            data: result
-        });
+        // console.log(result.docs[0]);
+        if (!result.docs[0]) {
+            res.status(404).json({
+                status: false,
+                message: "Favourites Not found"
+            });
+        }else{
+            res.json({
+                status: true,
+                message: "Favourites retrieved successfully",
+                data: result
+            });
+        }
     }); 
 }
 
@@ -976,7 +1011,7 @@ exports.addViews = function(req,res) {
         });
         return;
     } 
-    items.findOne({_id:req.body._id, status:"published"}, function (err, item) {
+    items.findOne({_id:req.body._id, status:"active"}, function (err, item) {
         if (err) {
             res.status(400).json({
                 status: false,

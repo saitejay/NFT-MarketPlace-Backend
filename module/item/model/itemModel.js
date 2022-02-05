@@ -159,7 +159,7 @@ var itemSchema = mongoose.Schema({
     },
     status:{
         type: String,
-        enum : ['created','minted', 'published'],
+        enum : ['created','minted', 'active', 'inactive'],
         default: 'created'
     },
     minted_date: {
@@ -172,6 +172,10 @@ var itemSchema = mongoose.Schema({
     is_on_auction: {
         type: Boolean,
         default: false
+    },
+    auction_id: {
+        type: Number,
+        default: 0
     }
 });
 
