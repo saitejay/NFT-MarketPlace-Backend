@@ -44,7 +44,6 @@ exports.add = function(req,res) {
     item.name = req.body.name;
     item.description = req.body.description;
     item.category_id = req.body.category_id;
-    item.collection_id = req.body.collection_id;
     item.collection_keyword = req.body.collection_keyword;
     // item.auther_id = req.decoded.user_id;
     item.creator_address = req.decoded.public_key;
@@ -58,7 +57,7 @@ exports.add = function(req,res) {
     item.attributes = req.body.attributes ? req.body.attributes : [];
     item.levels = req.body.levels ? req.body.levels : [];
     item.stats = req.body.stats ? req.body.stats : [];
-    collections.findOne({collection_id: req.body.collection_id}, function (err, collection) {
+    collections.findOne({collection_keyword: req.body.collection_keyword}, function (err, collection) {
         if (err || !collection) {
             res.status(404).json({
                 status: false,
@@ -67,6 +66,7 @@ exports.add = function(req,res) {
             });
             return;
         }
+        item.collection_id = collection.collection_id;
         item.collection_name = collection.name;
         item.royalties = collection.royalties;
         item.collection_address = collection.collection_address;
@@ -334,7 +334,7 @@ exports.list = function(req,res)
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id is_on_auction auction_id',
+            select: 'name thumb like_count status price owner_image is_on_auction current_owner',
             page:page,
             offset:offset,
             limit:10,    
@@ -844,119 +844,6 @@ exports.listByCollection = function(req,res) {
        })
     })
 }
-
-
-
-//backup
-// exports.list = function(req,res) {
-//     var keyword = req.query.keyword ? req.query.keyword : ''; 
-//     keyword = keyword.replace("+"," ");     
-//     var page = req.query.page ? req.query.page : '1';  
-//     var query  = items.find();
-//     var offset = ( page == '1' ) ? 0 : ((parseInt(page-1))*10);
-//     if ( keyword != '' ) {
-//         search = { $or: [ { 
-//             name :   {
-//                 $regex: new RegExp(keyword, "ig")
-//         }  } , {
-//             description : {
-//                 $regex : new RegExp ( keyword , "ig")
-//             }
-//         }] }
-//        query = query.or(search)
-//     }    
-//     if(req.query.type == "mycollection" && req.decoded.user_id != null) {
-//         query = query.where('collection_id',req.query.collection_id);
-//         query = query.sort('-create_date')
-//     } else if(req.query.type == "view" && req.decoded.user_id != null) {
-//         query = query.where('_id',req.query.item_id);
-//     } else {
-//         if(req.query.user && req.decoded.user_id != null) {
-//             if(req.decoded.role == 1 && req.query.user == "admin") {
-//             } else {
-//                 query = query.where('status','active');
-//             }
-            
-//         } else {
-//             query = query.where('status','active');
-//         }
-        
-//         if(req.query.type == "my") {
-//             query = query.where('author_id',req.query.user_id).sort('-create_date');
-//         }else if(req.query.type == "collected") {
-//             query = query.where('current_owner',req.query.user_id).where("author_id",{"$ne":req.query.user_id}).sort('-create_date');
-//         } else if(req.query.type == "view") { 
-//             query = query.where('_id',req.query.item_id);
-//         } else if(req.query.type == "offer") { 
-//             query = query.where('has_offer',true);
-//         } else if(req.query.type == "collection") { 
-//             query = query.where('collection_id',req.query.collection_id);
-//         } else if(req.query.type == "category") { 
-//             query = query.where('category_id',req.query.category_id);
-//         } else if (req.query.type == "price") {
-//             query = query.where('price',{ $gte: req.query.price_range })
-//         } else if(req.query.type == "mostviewed") {
-//             query = query.sort('-view_count')
-//         } else if(req.query.type == "mostliked") {
-//             query = query.sort('-like_count')
-//         } else {
-//             query = query.sort('-create_date')
-//         }
-//     }
-//     var options;
-//     if(req.query.type != "view") { 
-//         options = {
-//             select:  'name description thumb like_count create_date status price',
-//             page:page,
-//             offset:offset,
-//             limit:10,    
-//         }; 
-//     } else {
-//         query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'_id username first_name last_name profile_image'})
-//         options = {
-//             page:page,
-//             offset:offset,
-//             limit:10,    
-//         }; 
-//     }
-
- 
-   
-//     items.paginate(query, options).then(function (result) {
-//         if(req.query.type != "view") { 
-//             res.json({
-//                 status: true,
-//                 message: "Item retrieved successfully",
-//                 data: result,
-//                 return_id:0
-//             });
-//         } else {
-//             var is_liked = 0;
-//             if(req.decoded.user_id != null) {
-//                 favourites.findOne({item_id:req.query.item_id, user_id:req.decoded.user_id}, function (err, favourite) {
-//                   if(favourite) {
-//                       is_liked = 1
-//                   }
-//                   res.json({
-//                     status: true,
-//                     message: "Item retrieved successfully",
-//                     data: result,
-//                     return_id: is_liked
-//                   });
-//                 })
-//             } else {
-//                 res.json({
-//                     status: true,
-//                     message: "Item retrieved successfully",
-//                     data: result,
-//                     return_id: is_liked
-//                 });
-//             }
-
-//         }
-
-//     }); 
-// }
 
 /*
 * This is the function which used to list item in database

@@ -266,7 +266,7 @@ exports.list = function(req,res) {
     }
 
     var options = {
-    select:   'name description banner image royalties item_count collection_id collection_keyword author_address collection_address contract_symbol',
+        select:   'name banner image item_count collection_keyword',
     page:page,
     offset:offset,
     limit:10,    

@@ -12,7 +12,7 @@ var adminauth = require("./../../../middleware/adminauth");
 var optionalauth = require("./../../../middleware/optionalauth");
 const { check } = require('express-validator');
 
-router.post('/add',[check('name').not().isEmpty(),check('price').not().isEmpty(),check('description').not().isEmpty(),check('category_id').not().isEmpty(),check('collection_id').not().isEmpty(),auth],itemController.add)
+router.post('/add',[check('name').not().isEmpty(),check('price').not().isEmpty(),check('description').not().isEmpty(),check('category_id').not().isEmpty(),check('collection_keyword').not().isEmpty(),auth],itemController.add)
 router.put('/update',[check('_id').not().isEmpty(),auth],itemController.update)
 router.delete('/delete',[check('_id').not().isEmpty(),auth],itemController.delete)
 router.get('/list',optionalauth,itemController.list)
