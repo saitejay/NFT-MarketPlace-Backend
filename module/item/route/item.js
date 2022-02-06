@@ -1,11 +1,8 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : item.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all route releated to collecion api request.
 */
+
 
 var express = require('express')
 var router = express.Router();
@@ -41,4 +38,6 @@ router.post('/updateprice',[check('item_id').not().isEmpty(),auth],itemControlle
 router.get('/view/:id',itemController.view)
 router.post('/generateabi',itemController.generateHash)
 router.get('/getabi',itemController.getABI)
+router.post('/activateitem',[check('_id').not().isEmpty(),auth],itemController.activateItem)
+
 module.exports = router

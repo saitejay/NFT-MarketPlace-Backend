@@ -1643,7 +1643,6 @@ transferAdminComission = function(item, callback) {
     })
 }
 
-
 /**
  * This is the function which used to transfer erc721 token
  */
@@ -1788,3 +1787,44 @@ exports.view = function(req,res) {
     return;
 }
 
+//changing status ti inactive to active
+exports.activateItem = function(req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    items.findOne({_id: req.body._id, current_owner: req.decoded.public_key, status: "inactive"}, function(err, itemObj){
+        if(err){
+            res.json({
+                status: false,
+                message: "Request failed"
+            });
+        }else if(!itemObj){
+            res.json({
+                status: false,
+                message: "Item not found"
+            });
+        }else{
+            itemObj.status = "active";
+            itemObj.save(function(err, result){
+                if(err){
+                    res.json({
+                        status: false,
+                        message: "Request failed"
+                    });
+                }else{
+                    res.json({
+                        status: true,
+                        message: "Item activated successfully",
+                        data: result
+                    });
+                }
+            })
+        }
+    })
+}
