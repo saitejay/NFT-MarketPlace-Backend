@@ -22,6 +22,7 @@ var web3 = new Web3(new Web3.providers.HttpProvider(config.eth_http));
 var cp = require('child_process');
 var mailer = require('./../../common/controller/mailController'); 
 const { find } = require('../model/itemModel');
+const { public_key } = require('../../../helper/config');
 // const { Collection } = require('mongoose');
 // const { collection } = require('../model/itemModel');
 // require('util').inspect.defaultOptions.depth = null
@@ -262,7 +263,7 @@ exports.list = function(req,res)
                         ]
                     }
                 ]
-                }              
+                }             
             ).sort('-create_date') 
     } else if(req.query.type == "view") {
         query = query.where(
@@ -308,9 +309,9 @@ exports.list = function(req,res)
         
         
         if(req.query.type == "my") {
-            query = query.where({"creator_address": req.decoded.public_key}).sort('-create_date');
+            query = query.where({"creator_address": req.decoded.public_key, "current_owner": {$ne: req.decoded.public_key } }).sort('-create_date');
         }else if(req.query.type == "collected") {
-            query = query.where('current_owner',req.decoded.public_key).sort('-create_date');
+            query = query.where({'current_owner':req.decoded.public_key, "creator_address": {$ne: req.decoded.public_key} }).sort('-create_date');
         }
         //  else if(req.query.type == "view") { 
         //     query = query.where('_id', req.query._id, 'status', "active");
@@ -334,10 +335,10 @@ exports.list = function(req,res)
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name token_id',
+            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name token_id collection_id item_id',
             page:page,
             offset:offset,
-            limit:10,    
+            limit:20,    
         }; 
     } else {
         // query = query.populate({path: 'collection_id', model: collections }).populate({path: 'category_id', model: category }).populate({path: 'current_owner', model: users, select:'public_key username disply_name profile_image'})
@@ -345,7 +346,7 @@ exports.list = function(req,res)
             select:  'name description thumb like_count create_date status price attributes levels stats media category_id item_id collection_id collection_name collection_keyword royalties external_link unlock_content_url creator_image creator_name owner_image current_owner_name item_hash token_id is_on_auction auction_id',
             page:page,
             offset:offset,
-            limit:10,    
+            // limit:10,    
         };
         // console.log(query,options);
     }
