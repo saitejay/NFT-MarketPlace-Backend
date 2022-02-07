@@ -334,7 +334,7 @@ exports.list = function(req,res)
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name',
+            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name token_id',
             page:page,
             offset:offset,
             limit:10,    
