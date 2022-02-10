@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : userController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all user related api function.
 */
 
 var users = require("./../model/userModel");
@@ -21,7 +17,9 @@ var mailer = require("./../../common/controller/mailController");
 var media = require("./../../media/controller/mediaController");
 var cp = require("child_process");
 const itemModel = require("../../item/model/itemModel");
-/*
+const { defaultProfileImage } = require("../../../helper/profileImage");
+const { defaultProfileCover } = require("../../../helper/profileCover");
+/* 
  *  This is the function which used to retreive user list
  */
 exports.getList = async function(req, res) {
@@ -225,8 +223,8 @@ registerUser = function(req, res) {
     user.email = req.body.email ? req.body.email : "";
     user.display_name = req.body.display_name ? req.body.display_name : "";
     user.public_key = req.body.public_key ? req.body.public_key : "";
-    user.profile_image = req.body.profile_image ? req.body.profile_image : "";
-    user.profile_cover = req.body.profile_cover ? req.body.profile_cover : "";
+    user.profile_image = req.body.profile_image ? req.body.profile_image : defaultProfileImage;
+    user.profile_cover = req.body.profile_cover ? req.body.profile_cover : defaultProfileCover;
     user.bio = req.body.bio ? req.body.bio : "";
     user.facebook_username = req.body.facebook_username ?
         req.body.facebook_username :
