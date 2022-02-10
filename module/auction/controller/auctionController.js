@@ -10,6 +10,7 @@ const config = require('../../../helper/config');
 var fs = require('fs');
 const auctionModel = require('../model/auctionModel');
 const bidModel = require('../model/bidModel');
+const dutchModel = require('../model/dutchModel');
 const items = require('./../../item/model/itemModel');
 const userModel = require('../../user/model/userModel');
 const historyModel = require('../../item/model/historyModel');
@@ -40,6 +41,7 @@ exports.add = function(req,res) {
     auction.auction_start_time = req.body.auction_start_time;
     auction.auction_end_time = req.body.auction_end_time;
     auction.item_id = req.body.item_id;
+    auction.minimum_bid_amount = req.body.minimum_bid_amount;
     items.findOne({item_id: req.body.item_id, current_owner: req.decoded.public_key, is_on_auction:false}, function(err, itemObj){
         if (err) {
             res.status(401).json({
@@ -184,7 +186,8 @@ exports.placeBid = function(req,res) {
         });
         return;
     }
-    bidModel.findOne({bid_owner_address: req.decoded.public_key}, function(err, bidObj){
+    bidModel.findOne({auction_id: req.body.auction_id, bid_owner_address: req.decoded.public_key}, function(err, bidObj){
+        // console.log(bidObj);
         if (err) {
             res.status(401).json({
                 status: false,
@@ -208,49 +211,56 @@ exports.placeBid = function(req,res) {
                         message: "Auction not found"
                     });
                 }else{
-                    userModel.findOne({public_key: req.decoded.public_key, status: "active"}, function(err, userObj){
-                        bid.bid_id = req.body.bid_id;
-                        bid.auction_id = req.body.auction_id;
-                        bid.bid_owner_address = req.decoded.public_key;
-                        bid.bid_amount = req.body.bid_amount;
-                        bid.bid_owner_image = userObj.profile_image;
-                        bid.bid_owner_name = userObj.username;
-                        bid.save(function (err ,bidObj) {
-                            if (err) {
-                                res.status(401).json({
-                                    status: false,
-                                    message: "Request failed",
-                                    errors:err
-                                });
-                                return;
-                            }else{
-                                bidModel.find().sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
-                                    auctionObj.highest_bid_id = highestBid[0].bid_id;
-                                    auctionObj.highest_bid_amount = highestBid[0].bid_amount;
-                                    auctionObj.number_of_bids = auctionObj.number_of_bids + 1;
-                                    auctionObj.save(function (err ,auctionObj1) {
-                                        if (err) {
-                                            res.status(401).json({
-                                                status: false,
-                                                message: "Request failed",
-                                                errors:err
-                                            });
-                                            return;
-                                        }
-                                        res.status(200).json({
-                                            status: true,
-                                            message: "Bid Placed successfully",
-                                            result: bidObj
-                                        });
-                                    });
-                                })
-                            }
+                    if (auctionObj.minimum_bid_amount > req.body.bid_amount) {
+                        res.status(401).json({
+                            status: false,
+                            message: "Please make bid of at least minimum bid amount."
                         });
-                    })
+                    } else {
+                        userModel.findOne({public_key: req.decoded.public_key, status: "active"}, function(err, userObj){
+                            bid.bid_id = req.body.bid_id;
+                            bid.auction_id = req.body.auction_id;
+                            bid.bid_owner_address = req.decoded.public_key;
+                            bid.bid_amount = req.body.bid_amount;
+                            bid.bid_owner_image = userObj.profile_image;
+                            bid.bid_owner_name = userObj.username;
+                            bid.save(function (err ,bidObj) {
+                                if (err) {
+                                    res.status(401).json({
+                                        status: false,
+                                        message: "Request failed",
+                                        errors:err
+                                    });
+                                    return;
+                                }else{
+                                    bidModel.find().sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
+                                        auctionObj.highest_bid_id = highestBid[0].bid_id;
+                                        auctionObj.highest_bid_amount = highestBid[0].bid_amount;
+                                        auctionObj.number_of_bids = auctionObj.number_of_bids + 1;
+                                        auctionObj.save(function (err ,auctionObj1) {
+                                            if (err) {
+                                                res.status(401).json({
+                                                    status: false,
+                                                    message: "Request failed",
+                                                    errors:err
+                                                });
+                                                return;
+                                            }
+                                            res.status(200).json({
+                                                status: true,
+                                                message: "Bid Placed successfully",
+                                                result: bidObj
+                                            });
+                                        });
+                                    })
+                                }
+                            });
+                        })
+                    }
                 }
             })            
         } else {
-            console.log(bidObj);
+            // console.log(bidObj);
             if (bidObj.bid_amount < req.body.bid_amount) {
                 auctionModel.findOne({auction_id: req.body.auction_id, is_auction_live: true, auction_owner_address : { $ne: req.decoded.public_key } }, function(err, auctionObj){
                     if (err) {
@@ -363,7 +373,7 @@ exports.bidDetails = function(req, res){
         });
         return;
     }
-    bidModel.find({auction_id: req.body.auction_id, bid_id: req.body.bid_id}, function(err, bidObj){
+    bidModel.find({auction_id: req.query.auction_id, bid_id: req.query.bid_id}, function(err, bidObj){
         if(err){
             res.status(400).json({
                 status: false,
@@ -640,4 +650,123 @@ exports.paybackOnAuction = function (req, res) {
             
         }
     })
+}
+
+//Add auction
+exports.addDutch = function(req,res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    var dutch = new dutchModel();
+    dutch.auction_id = req.body.auction_id;
+    dutch.initial_amount = req.body.initial_amount;
+    dutch.price_drop_rate = req.body.price_drop_rate;
+    dutch.price_drop_interval = req.body.price_drop_interval;
+    dutch.auction_owner_address = req.decoded.public_key;
+    auctionModel.findOne({auction_id: req.body.auction_id}, function(err, auctionObj){
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err
+            });
+            return;
+        }else if(!auctionObj){
+            res.status(404).json({
+                status: false,
+                message: "Auction not found"
+            });
+            return;
+        }else{
+            dutch.collection_id = auctionObj.collection_id;
+            dutch.item_id = auctionObj.item_id;
+            dutch.token_id = auctionObj.token_id;
+            dutch.collection_address = auctionObj.collection_address;
+            dutch.auction_start_time = auctionObj.auction_start_time;
+            dutch.auction_end_time = auctionObj.auction_end_time;
+            dutch.nft_creator_address = auctionObj.nft_creator;
+            dutch.save(function(err, result){
+                if(err){    
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors: err
+                    });
+                    return;
+                }else{
+                    res.json({
+                        status: true,
+                        message: "Dutch created successfull",
+                        data: result
+                    });
+                }
+            })
+        }
+    })
+}
+
+//list Dutch_auction_details
+exports.listDutchDetails = function(req, res){
+    dutchModel.findOne({auction_id: req.query.auction_id}, function(err, dutchObj){
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err
+            });
+            return;
+        }else if(!dutchObj){
+            res.status(404).json({
+                status: false,
+                message: "Dutch not found"
+            });
+            return;
+        }else{
+            res.json({
+                status: true,
+                data: dutchObj
+            });
+        }
+    })
+}
+
+//List all the dutch
+exports.listAllDutchinfo = function(req, res){
+    dutchModel.find().exec(function(err, dutchObj){
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err
+            });
+            return;
+        }else if(!dutchObj){
+            res.status(404).json({
+                status: false,
+                message: "Dutch not found"
+            });
+            return;
+        }else{
+            res.json({
+                status: true,
+                data: dutchObj
+            });
+        }
+    })
+}
+
+//Accept dutch
+exports.acceptDutchAuction = function(req, res){
+    res.send("Accept dutch comming soon...");
+}
+
+//close dutch
+exports.closeDutchAuction = function(req, res){
+    res.send("Close dutch comming soon...");
 }

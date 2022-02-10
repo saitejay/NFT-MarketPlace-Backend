@@ -44,6 +44,10 @@ var auctionSchema = mongoose.Schema({
     highest_bid_amount:{
         type:Number,
         default:0
+    }, 
+    minimum_bid_amount:{
+        type:Number,
+        required: [true, 'Minimum bid amount is required']
     },
     auction_start_time: {
         type: Date,
