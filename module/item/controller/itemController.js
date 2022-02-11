@@ -238,31 +238,31 @@ exports.list = function(req,res)
         // $and: [{'collection_keyword': req.query.collection_keyword, 'current_owner': req.decoded.public_key}]
             query = query.where(
                 {
-                     $and: [
-                         {'collection_keyword':req.query.collection_keyword, 
-                         $or: [
-                             {'status': 'active'},
-                             {
-                                $and:[
-                                    {'current_owner':req.decoded.public_key, 
-                                    $or: [
-                                        {'status':'inactive'}
-                                        ]
-                                    }
-                                ]                                
-                            },
-                            {
-                                $and:[
-                                    {'creator_address':req.decoded.public_key, 
-                                    $or: [
-                                        {'status':'created'},{'status':'minted'},{'status':'inactive'}
-                                        ]
-                                    }
-                                ]    
-                            }
-                        ]
-                    }
-                ]
+                    $and: [
+                        {'collection_keyword':req.query.collection_keyword, 
+                            $or: [
+                                 {'status': 'active'},
+                                 {
+                                    $and:[
+                                        {'current_owner':req.decoded.public_key, 
+                                        $or: [
+                                            {'status':'inactive'}
+                                            ]
+                                        }
+                                    ]                                
+                                },
+                                {
+                                    $and:[
+                                        {'creator_address':req.decoded.public_key, 
+                                        $or: [
+                                            {'status':'created'},{'status':'minted'},{'status':'inactive'}
+                                            ]
+                                        }
+                                    ]    
+                                }
+                            ]
+                        }
+                    ]
                 }             
             ).sort('-create_date') 
     } else if(req.query.type == "view") {
@@ -295,8 +295,7 @@ exports.list = function(req,res)
            ]
            } 
         );
-    } else 
-    {
+    }else {
         // if(req.query.user && req.decoded.public_key != null) {
         //     if(req.decoded.role == 1 && req.query.user == "admin") {
         //     } else {
@@ -305,13 +304,11 @@ exports.list = function(req,res)
         // } 
         // else {
         //     query = query.where('status', "active");
-        // }
-        
-        
+        // } 
         if(req.query.type == "my") {
-            query = query.where({"creator_address": req.decoded.public_key, "current_owner": {$ne: req.decoded.public_key } }).sort('-create_date');
+            query = query.where({"creator_address": req.decoded.public_key }).sort('-create_date');
         }else if(req.query.type == "collected") {
-            query = query.where({'current_owner':req.decoded.public_key, "creator_address": {$ne: req.decoded.public_key} }).sort('-create_date');
+            query = query.where({"current_owner":req.decoded.public_key, "creator_address": {$ne: req.decoded.public_key} }).sort('-create_date');
         }
         //  else if(req.query.type == "view") { 
         //     query = query.where('_id', req.query._id, 'status', "active");
@@ -350,9 +347,6 @@ exports.list = function(req,res)
         };
         // console.log(query,options);
     }
-
- 
-   
     items.paginate(query, options).then(function (result) {
         if(result.docs.length == 0){
             res.status(404).json({
@@ -360,7 +354,6 @@ exports.list = function(req,res)
                 message: "No items found"
             });
         }
-        // console.log();
         else if(req.query.type != "view") { 
             res.json({
                 status: true,
@@ -1428,7 +1421,6 @@ exports.sendETH = function(req,res) {
     })
 }
 
-
 /**
  *  This is the function which used to report item
  */
@@ -1690,7 +1682,8 @@ exports.activateItem = function(req, res) {
         if(err){
             res.json({
                 status: false,
-                message: "Request failed"
+                message: "Request failed",
+                errors: err
             });
         }else if(!itemObj){
             res.json({
@@ -1698,21 +1691,30 @@ exports.activateItem = function(req, res) {
                 message: "Item not found"
             });
         }else{
-            itemObj.status = "active";
-            itemObj.save(function(err, result){
-                if(err){
-                    res.json({
-                        status: false,
-                        message: "Request failed"
-                    });
-                }else{
-                    res.json({
-                        status: true,
-                        message: "Item activated successfully",
-                        data: result
-                    });
-                }
-            })
+            if(req.body.price == 0){
+                res.status(400).json({
+                    status: false,
+                    message: "Price must be morethan 0"
+                });
+            }else {
+                itemObj.price = req.body.price;
+                itemObj.status = "active";
+                itemObj.save(function(err, result){
+                    if(err){
+                        res.json({
+                            status: false,
+                            message: "Request failed",
+                            errors: err
+                        });
+                    }else{
+                        res.json({
+                            status: true,
+                            message: "Item activated successfully",
+                            data: result
+                        });
+                    }
+                })
+            }
         }
     })
 }

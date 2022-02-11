@@ -38,6 +38,6 @@ router.post('/updateprice',[check('item_id').not().isEmpty(),auth],itemControlle
 router.get('/view/:id',itemController.view)
 router.post('/generateabi',itemController.generateHash)
 router.get('/getabi',itemController.getABI)
-router.post('/activateitem',[check('_id').not().isEmpty(),auth],itemController.activateItem)
+router.post('/activateitem',[check('_id').not().isEmpty(), check('price').not().isEmpty(), auth],itemController.activateItem)
 
 module.exports = router
