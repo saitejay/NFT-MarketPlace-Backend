@@ -77,4 +77,4 @@ var dutchSchema = mongoose.Schema({
 dutchSchema.plugin(uniqueValidator);
 dutchSchema.plugin(mongoosePaginate);
 
-module.exports = mongoose.model('dutch', auctionSchema,config.db.prefix+'dutch');
+module.exports = mongoose.model('dutch', dutchSchema,config.db.prefix+'dutch');
