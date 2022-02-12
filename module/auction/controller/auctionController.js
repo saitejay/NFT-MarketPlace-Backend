@@ -41,6 +41,7 @@ exports.add = function(req,res) {
     auction.auction_start_time = req.body.auction_start_time;
     auction.auction_end_time = req.body.auction_end_time;
     auction.item_id = req.body.item_id;
+    auction.highest_bid_amount = req.body.minimum_bid_amount;
     auction.minimum_bid_amount = req.body.minimum_bid_amount;
     items.findOne({item_id: req.body.item_id, current_owner: req.decoded.public_key, is_on_auction:false}, function(err, itemObj){
         if (err) {
@@ -78,6 +79,8 @@ exports.add = function(req,res) {
                 itemObj.status = "active";
                 itemObj.is_on_auction = true;
                 itemObj.auction_id = req.body.auction_id;
+                itemObj.min_bid_amount = req.body.minimum_bid_amount;
+                itemObj.current_auction_price = req.body.minimum_bid_amount;
                 itemObj.save(function (err, item) {
                     if (err) {
                         res.status(401).json({
@@ -236,6 +239,7 @@ exports.placeBid = function(req,res) {
                                     bidModel.find().sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
                                         auctionObj.highest_bid_id = highestBid[0].bid_id;
                                         auctionObj.highest_bid_amount = highestBid[0].bid_amount;
+                                        auctionObj.highest_bid_address = req.decoded.public_key;
                                         auctionObj.number_of_bids = auctionObj.number_of_bids + 1;
                                         auctionObj.save(function (err ,auctionObj1) {
                                             if (err) {
@@ -245,12 +249,29 @@ exports.placeBid = function(req,res) {
                                                     errors:err
                                                 });
                                                 return;
+                                            } else {
+                                                items.findOneAndUpdate({item_id: auctionObj1.item_id, status: "active", is_on_auction: true}, {current_auction_price: auctionObj1.highest_bid_amount}, function(err, item){
+                                                    if (err) {
+                                                        res.status(401).json({
+                                                            status: false,
+                                                            message: "Request failed",
+                                                            errors:err
+                                                        });
+                                                        return;
+                                                    } else if (!item) {
+                                                        res.status(404).json({
+                                                            status: false,
+                                                            message: "Item not found"
+                                                        });
+                                                    } else {
+                                                        res.status(200).json({
+                                                            status: true,
+                                                            message: "Bid Placed successfully",
+                                                            result: bidObj
+                                                        });
+                                                    }
+                                                });
                                             }
-                                            res.status(200).json({
-                                                status: true,
-                                                message: "Bid Placed successfully",
-                                                result: bidObj
-                                            });
                                         });
                                     })
                                 }
@@ -298,6 +319,7 @@ exports.placeBid = function(req,res) {
                                     auctionObj.highest_bid_id = highestBid[0].bid_id;
                                     auctionObj.highest_bid_amount = highestBid[0].bid_amount;
                                     auctionObj.number_of_bids = auctionObj.number_of_bids + 1;
+                                    auctionObj.highest_bid_address = req.decoded.public_key;
                                     auctionObj.save(function (err ,auctionObj1) {
                                         if (err) {
                                             res.status(401).json({
@@ -306,12 +328,29 @@ exports.placeBid = function(req,res) {
                                                 errors:err
                                             });
                                             return;
+                                        } else {
+                                            items.findOneAndUpdate({item_id: auctionObj1.item_id, status: "active", is_on_auction: true}, {current_auction_price: auctionObj1.highest_bid_amount}, function(err, item){
+                                                if (err) {
+                                                    res.status(401).json({
+                                                        status: false,
+                                                        message: "Request failed",
+                                                        errors:err
+                                                    });
+                                                    return;
+                                                } else if (!item) {
+                                                    res.status(404).json({
+                                                        status: false,
+                                                        message: "Item not found"
+                                                    });
+                                                } else {
+                                                    res.status(200).json({
+                                                        status: true,
+                                                        message: "Bid Placed successfully",
+                                                        result: bidObj
+                                                    });
+                                                }
+                                            });
                                         }
-                                        res.status(200).json({
-                                            status: true,
-                                            message: "Bid Placed successfully",
-                                            result: bidObj
-                                        });
                                     });
                                 })
                             }
@@ -431,7 +470,7 @@ exports.closingAuction = function(req, res){
                     return;
                 }
                 if (auctionObj1.number_of_bids == 0) {
-                    items.findOneAndUpdate({item_id: auctionObj1.item_id}, {is_on_auction: false, status: "inactive", auction_id: 0}, function (err, item) {
+                    items.findOneAndUpdate({item_id: auctionObj1.item_id}, {is_on_auction: false, status: "inactive", auction_id: 0, min_bid_amount: 0, current_auction_price: 0}, function (err, item) {
                         if (err) {
                             res.status(401).json({
                                 status: false,
@@ -545,7 +584,7 @@ exports.paybackOnAuction = function (req, res) {
                             return;
                         } else {
                             let prev_owner = item.current_owner;
-                            userModel.findOne({public_key: req.decoded.public_key}, function(err, user){
+                            userModel.findOne({public_key: auctionObj.highest_bid_address}, function(err, user){
                                 if (err) {
                                     res.status(400).json({
                                         status: false,
@@ -559,13 +598,22 @@ exports.paybackOnAuction = function (req, res) {
                                         message: "User not found",
                                     });
                                     return;
+                                } else if (user.public_key != req.decoded.public_key) {
+                                    res.status(401).json({
+                                        status: false,
+                                        message: "You are not eligible for claiming this NFT",
+                                    });
+                                    return;
                                 } else {
-                                    item.current_owner = req.decoded.public_key;
+                                    item.current_owner = auctionObj.highest_bid_address;
                                     item.owner_image = user.profile_image;
                                     item.current_owner_name = user.username;
                                     item.is_on_auction = false;
                                     item.status = "inactive";
                                     item.auction_id = 0;
+                                    item.min_bid_amount = 0;
+                                    item.current_auction_price = 0;
+                                    item.price = bidObj.bid_amount;
                                     collections.findOne({collection_id:item.collection_id},function(err, collection){
                                         if (err) {
                                             res.status(400).json({

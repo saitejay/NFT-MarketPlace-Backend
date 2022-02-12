@@ -41,9 +41,13 @@ var auctionSchema = mongoose.Schema({
         type: Number,
         default:0
     },
+    highest_bid_address: {
+        type: String,
+        default: ''
+    },
     highest_bid_amount:{
         type:Number,
-        default:0
+        required: [true, 'Highest bid amount is required']
     }, 
     minimum_bid_amount:{
         type:Number,

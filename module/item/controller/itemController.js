@@ -167,7 +167,6 @@ exports.update = function(req,res) {
     })
 }
 
-
 /*
 * This is the function which used to delete item in database
 */
@@ -211,7 +210,6 @@ exports.delete = function(req,res) {
         }
     });
 }
-
 
 /*
 * This is the function which used to list item in database
@@ -332,7 +330,7 @@ exports.list = function(req,res)
     var options;
     if(req.query.type != "view") {
         options = {
-            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name token_id collection_id item_id',
+            select: 'name thumb like_count status price owner_image is_on_auction current_owner_name token_id collection_id item_id min_bid_amount current_auction_price',
             page:page,
             offset:offset,
             limit:20,    
@@ -435,7 +433,6 @@ exports.mint_token = function (req, res) {
     })
 }
 
-
 /*
 * This is the function which used to publish item in ethereum network
 */
@@ -496,7 +493,6 @@ exports.publish = function(req,res) {
     });
 }
 
-
 /*
 * This is the function which used to update item price
 */
@@ -540,8 +536,6 @@ exports.updatePrice = function(req,res){
         })
     })
 }
-
-
 
 /*
 * This is the function which used to purchase item in ethereum network
@@ -749,8 +743,6 @@ exports.pricelist = function(req,res) {
     }); 
 }
 
-
-
 /*
 * This is the function which used to get more from collection for item detail page
 */
@@ -901,7 +893,6 @@ exports.actionFavourite = function(req,res) {
         }
     });
 }
-
 
 /*
 * This is the function which used to list user who add the item as favourite item
@@ -1317,7 +1308,6 @@ exports.removeOffers = function(req,res) {
         })
     })
 }
-
 
 /*
 * This is the function which used to list item offer and profile offer

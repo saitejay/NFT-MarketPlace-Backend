@@ -176,6 +176,14 @@ var itemSchema = mongoose.Schema({
     auction_id: {
         type: Number,
         default: 0
+    },
+    min_bid_amount: {
+        type: Number,
+        default: 0
+    },
+    current_auction_price: {
+        type: Number,
+        default: 0
     }
 });
 
