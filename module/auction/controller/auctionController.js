@@ -81,6 +81,7 @@ exports.add = function(req,res) {
                 itemObj.auction_id = req.body.auction_id;
                 itemObj.min_bid_amount = req.body.minimum_bid_amount;
                 itemObj.current_auction_price = req.body.minimum_bid_amount;
+                itemObj.auction_end_time = req.body.auction_end_time;
                 itemObj.save(function (err, item) {
                     if (err) {
                         res.status(401).json({

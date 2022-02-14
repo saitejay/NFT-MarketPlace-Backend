@@ -184,6 +184,9 @@ var itemSchema = mongoose.Schema({
     current_auction_price: {
         type: Number,
         default: 0
+    },
+    auction_end_time: {
+        type: Date
     }
 });
 
