@@ -202,6 +202,7 @@ exports.placeBid = function(req,res) {
         } else if(!bidObj) {
             var bid = new bidModel();
             auctionModel.findOne({auction_id: req.body.auction_id, is_auction_live: true, auction_owner_address : { $ne: req.decoded.public_key } }, function(err, auctionObj){
+                console.log(auctionObj);
                 if (err) {
                     res.status(401).json({
                         status: false,
@@ -381,7 +382,7 @@ exports.listBidsInAuction = function(req, res) {
         });
         return;
     }
-    bidModel.find({auction_id: req.query.auction_id}, function(err, bidObj){
+    bidModel.find({auction_id: req.query.auction_id}).sort({bid_amount: "descending"}).exec(function(err, bidObj){
         if(err){
             res.status(400).json({
                 status: false,
