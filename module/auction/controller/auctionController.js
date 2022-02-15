@@ -237,7 +237,7 @@ exports.placeBid = function(req,res) {
                                     });
                                     return;
                                 }else{
-                                    bidModel.find().sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
+                                    bidModel.find({auction_id: req.body.auction_id}).sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
                                         auctionObj.highest_bid_id = highestBid[0].bid_id;
                                         auctionObj.highest_bid_amount = highestBid[0].bid_amount;
                                         auctionObj.highest_bid_address = req.decoded.public_key;
@@ -308,7 +308,7 @@ exports.placeBid = function(req,res) {
                                 });
                                 return;
                             } else {
-                                bidModel.find().sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
+                                bidModel.find({auction_id: req.body.auction_id}).sort({"bid_amount":-1}).limit(1).exec(function(err, highestBid){
                                     if (err) {
                                         res.status(401).json({
                                             status: false,
