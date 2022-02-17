@@ -26,11 +26,52 @@ const { public_key } = require('../../../helper/config');
 // const { Collection } = require('mongoose');
 // const { collection } = require('../model/itemModel');
 // require('util').inspect.defaultOptions.depth = null
+const cloudinary = require("cloudinary").v2;
+cloudinary.config({ 
+    cloud_name: 'shreewallet', 
+    api_key: '253594261126844', 
+    api_secret: 'u3Q5RXtzyCxxxpHWzCoMnwmdHRs' 
+ });
+// Image
+// exports.img =  async (req, res) => {
+//     try {
+//         const fileStr1 = req.body.data1;
+//         //console.log(req.body);
+//         const fileStr2 = req.body.data2;
+//         console.log(fileStr1);
+//         const uploadResponse1 = await cloudinary.uploader.upload(fileStr1, {});
+//         const uploadResponse2 = await cloudinary.uploader.upload(fileStr2, {});
+//         console.log(uploadResponse1);
+//         console.log(uploadResponse2);
+//         res.json({ msg: 'success', secure_url_1 : uploadResponse1.secure_url,secure_url_2 : uploadResponse2.secure_url });
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ err: 'Something went wrong' });
+//     }
+// }
+
+// exports.img =  async (req, res) => {
+//     try {
+//         const fileStr1 = req.body.data1;
+//         //console.log(req.body);
+//         const fileStr2 = req.body.data2;
+//         console.log(fileStr1);
+//         const uploadResponse1 = await cloudinary.uploader.upload(fileStr1, {});
+//         const uploadResponse2 = await cloudinary.uploader.upload(fileStr2, {});
+//         console.log(uploadResponse1);
+//         console.log(uploadResponse2);
+//         res.json({ msg: 'success', secure_url_1 : uploadResponse1.secure_url, secure_url_2 : uploadResponse2.secure_url });
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ err: 'Something went wrong' });
+//     }
+// }
+
 
 /*
 * This is the function which used to add item in database
 */
-exports.add = function(req,res) {
+exports.add = async function(req,res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400).json({
@@ -39,8 +80,23 @@ exports.add = function(req,res) {
             errors:errors.array()
         });
         return;
-    }  
+    }
+    const fileStr1 = req.body.media;
+    const fileStr2 = req.body.thumb;
+    var uploadResponse1,uploadResponse2;
     var item = new items();
+
+    try {
+     uploadResponse1 = await cloudinary.uploader.upload(fileStr1, {});
+     uploadResponse2 = await cloudinary.uploader.upload(fileStr2, {});
+     item.media = uploadResponse1.secure_url;
+     item.thumb = uploadResponse2.secure_url;
+    }catch(err) {
+        item.media = '';
+     item.thumb = '';
+        console.error(err);
+    }
+   
 
     item.name = req.body.name;
     item.description = req.body.description;
@@ -51,8 +107,9 @@ exports.add = function(req,res) {
     item.current_owner = req.decoded.public_key;
     item.price = req.body.price;
     item.unlock_content_url = req.body.unlock_content_url ? req.body.unlock_content_url : Boolean;
-    item.media = req.body.media ? req.body.media : '';
-    item.thumb = req.body.thumb ? req.body.thumb : '';
+   
+    // item.media = req.body.media;
+    // item.thumb = req.body.thumb;
     item.item_hash = req.body.item_hash ? req.body.item_hash : '';
     item.external_link = req.body.external_link ? req.body.external_link : '';
     item.attributes = req.body.attributes ? req.body.attributes : [];
