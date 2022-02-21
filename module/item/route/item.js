@@ -3,41 +3,121 @@ Project : NFT-marketplace
 FileName : item.js
 */
 
-
-var express = require('express')
+var express = require("express");
+const multer = require("multer");
 var router = express.Router();
-var itemController = require("./../controller/itemController")
+var itemController = require("./../controller/itemController");
 var auth = require("./../../../middleware/auth");
 var adminauth = require("./../../../middleware/adminauth");
 var optionalauth = require("./../../../middleware/optionalauth");
-const { check } = require('express-validator');
+const { check } = require("express-validator");
+const upload = multer();
 
-router.post('/add',[check('name').not().isEmpty(),check('price').not().isEmpty(),check('description').not().isEmpty(),check('category_id').not().isEmpty(),check('collection_keyword').not().isEmpty(),auth],itemController.add)
-router.put('/update',[check('_id').not().isEmpty(),auth],itemController.update)
-router.delete('/delete',[check('_id').not().isEmpty(),auth],itemController.delete)
-router.get('/list',optionalauth,itemController.list)
-router.get('/listbycollection',itemController.listByCollection)
-router.get('/morefromcollection',itemController.moreFromCollection)
-router.post('/addviews',auth,itemController.addViews)
-router.get('/viewslist',optionalauth,itemController.recentlyViewed)
-router.post('/addfavourites',auth,itemController.actionFavourite)
-router.get('/favouriteslist',itemController.listFavourite)
-router.post('/minting',[check('_id').not().isEmpty(),check('token_id').not().isEmpty(), auth],itemController.mint_token)
-router.post('/publish',[check('_id').not().isEmpty(),check('item_id').not().isEmpty(),check('transaction_hash').not().isEmpty(), auth],itemController.publish)
-router.post('/purchase',[check('item_id').not().isEmpty(), auth],itemController.purchase)
-router.get('/history',itemController.history)
-router.get('/prices',itemController.pricelist)
-router.post('/addoffer',[check('item_id').not().isEmpty(),auth],itemController.addOffers)
-router.post('/removeoffer',[check('offer_id').not().isEmpty(),auth],itemController.removeOffers)
-router.post('/actionoffer',[check('item_id').not().isEmpty(),auth],itemController.actionOffers)
-router.get('/offers',optionalauth,itemController.listOffers)
-router.get('/checkbalance',auth,itemController.checkUserBalance)
-router.post('/sendeth',[check('eth_address').not().isEmpty(),check('amount').not().isEmpty(),auth],itemController.sendETH)
-router.post('/report',[check('message').not().isEmpty(), check('item_id').not().isEmpty(),auth],itemController.report)
-router.post('/updateprice',[check('item_id').not().isEmpty(),auth],itemController.updatePrice)
-router.get('/view/:id',itemController.view)
-router.post('/generateabi',itemController.generateHash)
-router.get('/getabi',itemController.getABI)
-router.post('/activateitem',[check('_id').not().isEmpty(), check('price').not().isEmpty(), auth],itemController.activateItem)
-
-module.exports = router
+router.post(
+    "/add",
+    [
+        check("name").not().isEmpty(),
+        check("price").not().isEmpty(),
+        check("description").not().isEmpty(),
+        check("category_id").not().isEmpty(),
+        check("collection_keyword").not().isEmpty(),
+        upload.fields([
+            { name: "media", maxCount: 1 },
+            { name: "thumb", maxCount: 1 },
+        ]),
+        auth,
+    ],
+    itemController.add
+);
+router.put(
+    "/update",
+    [
+        check("_id").not().isEmpty(),
+        upload.fields([
+            { name: "media", maxCount: 1 },
+            { name: "thumb", maxCount: 1 },
+        ]),
+        auth,
+    ],
+    itemController.update
+);
+router.delete(
+    "/delete",
+    [check("_id").not().isEmpty(), auth],
+    itemController.delete
+);
+router.get("/list", optionalauth, itemController.list);
+router.get("/listbycollection", itemController.listByCollection);
+router.get("/morefromcollection", itemController.moreFromCollection);
+router.post("/addviews", auth, itemController.addViews);
+router.get("/viewslist", optionalauth, itemController.recentlyViewed);
+router.post("/addfavourites", auth, itemController.actionFavourite);
+router.get("/favouriteslist", itemController.listFavourite);
+router.post(
+    "/minting",
+    [check("_id").not().isEmpty(), check("token_id").not().isEmpty(), auth],
+    itemController.mint_token
+);
+router.post(
+    "/publish",
+    [
+        check("_id").not().isEmpty(),
+        check("item_id").not().isEmpty(),
+        check("transaction_hash").not().isEmpty(),
+        auth,
+    ],
+    itemController.publish
+);
+router.post(
+    "/purchase",
+    [check("item_id").not().isEmpty(), auth],
+    itemController.purchase
+);
+router.get("/history", itemController.history);
+router.get("/prices", itemController.pricelist);
+router.post(
+    "/addoffer",
+    [check("item_id").not().isEmpty(), auth],
+    itemController.addOffers
+);
+router.post(
+    "/removeoffer",
+    [check("offer_id").not().isEmpty(), auth],
+    itemController.removeOffers
+);
+router.post(
+    "/actionoffer",
+    [check("item_id").not().isEmpty(), auth],
+    itemController.actionOffers
+);
+router.get("/offers", optionalauth, itemController.listOffers);
+router.get("/checkbalance", auth, itemController.checkUserBalance);
+router.post(
+    "/sendeth",
+    [
+        check("eth_address").not().isEmpty(),
+        check("amount").not().isEmpty(),
+        auth,
+    ],
+    itemController.sendETH
+);
+router.post(
+    "/report",
+    [check("message").not().isEmpty(), check("item_id").not().isEmpty(), auth],
+    itemController.report
+);
+router.post(
+    "/updateprice",
+    [check("item_id").not().isEmpty(), auth],
+    itemController.updatePrice
+);
+router.get("/view/:id", itemController.view);
+router.post("/generateabi", itemController.generateHash);
+router.get("/getabi", itemController.getABI);
+router.post(
+    "/activateitem",
+    [check("_id").not().isEmpty(), check("price").not().isEmpty(), auth],
+    itemController.activateItem
+);
+// router.post('/img',itemController.img)
+module.exports = router;

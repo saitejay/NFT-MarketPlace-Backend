@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName :  historyModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define view schema that will store and reterive item view information.
 */
 
 var mongoose = require('mongoose');

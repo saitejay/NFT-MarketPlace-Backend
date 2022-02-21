@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : settingsController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all user related api function.
 */
 
 var options = require("./../model/optionsModel");

@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
-FileName :  offerModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define offer schema that will store and reterive item offer information.
+Project : NFT-marketplace
+FileName : offerModel.js
 */
 
 var mongoose = require('mongoose');

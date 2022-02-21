@@ -5,9 +5,7 @@ FileName : userController.js
 
 var users = require("./../model/userModel");
 var jwt = require("jsonwebtoken");
-const {
-    validationResult
-} = require("express-validator");
+const { validationResult } = require("express-validator");
 var randomstring = require("randomstring");
 // var bcrypt = require("bcrypt");
 var validator = require("validator");
@@ -19,362 +17,391 @@ var cp = require("child_process");
 const itemModel = require("../../item/model/itemModel");
 const { defaultProfileImage } = require("../../../helper/profileImage");
 const { defaultProfileCover } = require("../../../helper/profileCover");
-/* 
+const { json } = require("express");
+const cloudinary = require("cloudinary").v2;
+// const streamifier = require('streamifier')
+// const multer  = require('multer')
+// var upload = multer()
+const { uploadImages } = require("../../../helper/uploadToCloudinary");
+
+cloudinary.config({
+  cloud_name: config.cloud_name,
+  api_key: config.api_key,
+  api_secret: config.api_secret,
+});
+/*
  *  This is the function which used to retreive user list
  */
-exports.getList = async function(req, res) {
-    var logged_id = "";
-    if (req.query.public_key) {
-        logged_id = req.query.public_key;
-    }
-    var keyword = req.query.keyword ? req.query.keyword : "";
-    keyword = keyword.replace("+", " ");
-    var page = req.query.page ? req.query.page : "1";
-    var query;
-    if (logged_id) {
-        var blockerIDS = [];
-        blockerIDS.push(logged_id);
-        query = users.find({
-            public_key: {
-                $nin: blockerIDS
-            }
-        });
-    } else {
-        query = users.find();
-    }
-    var offset = page == "1" ? 0 : parseInt(page - 1) * 15;
-    if (keyword != "") {
-        search = {
-            $or: [{
-                    display_name: {
-                        $regex: new RegExp(keyword, "ig"),
-                    },
-                },
-                {
-                    username: {
-                        $regex: new RegExp(keyword, "ig"),
-                    },
-                },
-                {
-                    email: {
-                        $regex: new RegExp(keyword, "ig"),
-                    },
-                },
-            ],
-        };
-        query = query.or(search);
-    }
-    query = query.where("status", "active").sort("-create_date");
-    var options = {
-        select: "username email profile_image display_name public_key",
-        page: page,
-        offset: offset,
-        limit: 15,
-    };
-    users.paginate(query, options).then(function(result) {
-        res.json({
-            status: true,
-            message: "Users retrieved successfully",
-            data: result,
-        });
+exports.getList = async function (req, res) {
+  var logged_id = "";
+  if (req.query.public_key) {
+    logged_id = req.query.public_key;
+  }
+  var keyword = req.query.keyword ? req.query.keyword : "";
+  keyword = keyword.replace("+", " ");
+  var page = req.query.page ? req.query.page : "1";
+  var query;
+  if (logged_id) {
+    var blockerIDS = [];
+    blockerIDS.push(logged_id);
+    query = users.find({
+      public_key: {
+        $nin: blockerIDS,
+      },
     });
+  } else {
+    query = users.find();
+  }
+  var offset = page == "1" ? 0 : parseInt(page - 1) * 15;
+  if (keyword != "") {
+    search = {
+      $or: [
+        {
+          display_name: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+        {
+          username: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+        {
+          email: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+      ],
+    };
+    query = query.or(search);
+  }
+  query = query.where("status", "active").sort("-create_date");
+  var options = {
+    select: "username email profile_image display_name public_key",
+    page: page,
+    offset: offset,
+    limit: 15,
+  };
+  users.paginate(query, options).then(function (result) {
+    res.json({
+      status: true,
+      message: "Users retrieved successfully",
+      data: result,
+    });
+  });
 };
 
 /*
  *   This is the function which used to retreive user list for admin
  */
-exports.getAdminList = async function(req, res) {
-    var logged_id = "";
-    if (req.query.public_key) {
-        logged_id = req.query.public_key;
-    }
-    var keyword = req.query.keyword ? req.query.keyword : "";
-    keyword = keyword.replace("+", " ");
-    var page = req.query.page ? req.query.page : "1";
-    var query;
-    if (logged_id) {
-        var blockerIDS = [];
-        blockerIDS.push(logged_id);
-        query = users.find({
-            public_key: {
-                $nin: blockerIDS
-            }
-        });
-    } else {
-        query = users.find();
-    }
-    var offset = page == "1" ? 0 : parseInt(page - 1) * 15;
-    if (keyword != "") {
-        search = {
-            $or: [{
-                    display_name: {
-                        $regex: new RegExp(keyword, "ig"),
-                    },
-                },
-                {
-                    username: {
-                        $regex: new RegExp(keyword, "ig"),
-                    }
-                },
-                {
-                    email: {
-                        $regex: new RegExp(keyword, "ig"),
-                    },
-                },
-            ],
-        };
-        query = query.or(search);
-    }
-    query = query.sort("-create_date");
-    var options = {
-        select: "username email profile_image display_name status public_key",
-        page: page,
-        offset: offset,
-        limit: 15,
-    };
-    users.paginate(query, options).then(function(result) {
-        res.json({
-            status: true,
-            message: "Users retrieved successfully",
-            data: result,
-        });
+exports.getAdminList = async function (req, res) {
+  var logged_id = "";
+  if (req.query.public_key) {
+    logged_id = req.query.public_key;
+  }
+  var keyword = req.query.keyword ? req.query.keyword : "";
+  keyword = keyword.replace("+", " ");
+  var page = req.query.page ? req.query.page : "1";
+  var query;
+  if (logged_id) {
+    var blockerIDS = [];
+    blockerIDS.push(logged_id);
+    query = users.find({
+      public_key: {
+        $nin: blockerIDS,
+      },
     });
+  } else {
+    query = users.find();
+  }
+  var offset = page == "1" ? 0 : parseInt(page - 1) * 15;
+  if (keyword != "") {
+    search = {
+      $or: [
+        {
+          display_name: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+        {
+          username: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+        {
+          email: {
+            $regex: new RegExp(keyword, "ig"),
+          },
+        },
+      ],
+    };
+    query = query.or(search);
+  }
+  query = query.sort("-create_date");
+  var options = {
+    select: "username email profile_image display_name status public_key",
+    page: page,
+    offset: offset,
+    limit: 15,
+  };
+  users.paginate(query, options).then(function (result) {
+    res.json({
+      status: true,
+      message: "Users retrieved successfully",
+      data: result,
+    });
+  });
 };
 
 /*
  *  This is the function which used to retreive user list
  */
-exports.getListByIds = async function(req, res) {
-    var query = users.find({
-        'public_key': {
-            $in: req.body.users
-        }
+exports.getListByIds = async function (req, res) {
+  var query = users.find({
+    public_key: {
+      $in: req.body.users,
+    },
+  });
+  query.select("display_name profile_image public_key");
+  query.exec(function (err, data) {
+    res.json({
+      status: true,
+      message: "Users retrieved successfully",
+      data: data,
     });
-    query.select("display_name profile_image public_key");
-    query.exec(function(err, data) {
-        res.json({
-            status: true,
-            message: "Users retrieved successfully",
-            data: data,
-        });
-    });
+  });
 };
 
 /*
  *  This is the function which used to retreive user detail by user's public key
  */
-exports.details = function(req, res) {
-    // console.log("received params are ", req.query);
-    users
-        .findOne({
-            public_key: req.query.public_key
-        })
-        .select(
-            "public_key username email display_name profile_image profile_cover bio status create_date facebook_username twitter_username instagram_username"
-        )
-        .exec(function(err, user) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: "User not found",
-                });
-                return;
-            }
-            if (this.isEmptyObject(user)) {
-                res.status(404).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: "User not found",
-                });
-                return;
-            }
-            res.json({
-                status: true,
-                message: "Profile info retrieved successfully",
-                result: user,
-            });
+exports.details = function (req, res) {
+  // console.log("received params are ", req.query);
+  users
+    .findOne({
+      public_key: req.query.public_key,
+    })
+    .select(
+      "public_key username email display_name profile_image profile_cover bio status create_date facebook_username twitter_username instagram_username"
+    )
+    .exec(function (err, user) {
+      if (err) {
+        res.status(401).json({
+          status: false,
+          message: "Request failed",
+          errors: "User not found",
         });
+        return;
+      }
+      if (this.isEmptyObject(user)) {
+        res.status(404).json({
+          status: false,
+          message: "Request failed",
+          errors: "User not found",
+        });
+        return;
+      }
+      res.json({
+        status: true,
+        message: "Profile info retrieved successfully",
+        result: user,
+      });
+    });
 };
 
 /*
  *  This is the function which used to create new user in Cryptotrades
  */
-exports.register = function(req, res) {
-    this.checkPublicKeyExist(req, res, function(result) {
+exports.register = function (req, res) {
+  this.checkPublicKeyExist(req, res, function (result) {
+    if (result) {
+      this.checkUserNameExist(req, res, function (result) {
         if (result) {
-            this.checkUserNameExist(req, res, function(result) {
-                if (result) {
-                    this.checkEmailExist(req, res, function(result) {
-                        this.registerUser(req, res);
-                    });
-                }
-            });
+          this.checkEmailExist(req, res, function (result) {
+            this.registerUser(req, res);
+          });
         }
-    });
+      });
+    }
+  });
 };
 
 /**
  *   This is the function handle user registration
  */
-registerUser = function(req, res) {
-    var user = new users();
-    user.username = req.body.username ? req.body.username : "";
-    user.email = req.body.email ? req.body.email : "";
-    user.display_name = req.body.display_name ? req.body.display_name : "";
-    user.public_key = req.body.public_key ? req.body.public_key : "";
-    user.profile_image = req.body.profile_image ? req.body.profile_image : defaultProfileImage;
-    user.profile_cover = req.body.profile_cover ? req.body.profile_cover : defaultProfileCover;
-    user.bio = req.body.bio ? req.body.bio : "";
-    user.facebook_username = req.body.facebook_username ?
-        req.body.facebook_username :
-        "";
-    user.twitter_username = req.body.twitter_username ?
-        req.body.twitter_username :
-        "";
-    user.instagram_username = req.body.instagram_username ?
-        req.body.instagram_username :
-        "";
+registerUser = function (req, res) {
+  var user = new users();
+  user.username = req.body.username ? req.body.username : "";
+  user.email = req.body.email ? req.body.email : "";
+  user.display_name = req.body.display_name ? req.body.display_name : "";
+  user.public_key = req.body.public_key ? req.body.public_key : "";
+  user.profile_image = req.body.profile_image
+    ? req.body.profile_image
+    : defaultProfileImage;
+  user.profile_cover = req.body.profile_cover
+    ? req.body.profile_cover
+    : defaultProfileCover;
+  user.bio = req.body.bio ? req.body.bio : "";
+  user.facebook_username = req.body.facebook_username
+    ? req.body.facebook_username
+    : "";
+  user.twitter_username = req.body.twitter_username
+    ? req.body.twitter_username
+    : "";
+  user.instagram_username = req.body.instagram_username
+    ? req.body.instagram_username
+    : "";
 
-    user.status = "active";
+  user.status = "active";
 
-    user.save(function(err, user) {
-        if (err) {
-            res.status(401).json({
-                status: false,
-                message: "Request failed",
-                errors: err,
-            });
-            return;
-        }
-        let token = jwt.sign({
-                public_key: user.public_key,
-                username: user.username,
-                email: user.email,
-                display_name: user.display_name,
-                // profile_image: user.profile_image ? user.profile_image : "",
-                status: user.status,
-                role: user.role,
-            },
-            config.secret_key, {
-                expiresIn: "24h", // expires in 24 hours
-            }
-        );
+  user.save(function (err, user) {
+    if (err) {
+      res.status(401).json({
+        status: false,
+        message: "Request failed",
+        errors: err,
+      });
+      return;
+    }
+    let token = jwt.sign(
+      {
+        public_key: user.public_key,
+        username: user.username,
+        email: user.email,
+        display_name: user.display_name,
+        // profile_image: user.profile_image ? user.profile_image : "",
+        status: user.status,
+        role: user.role,
+      },
+      config.secret_key,
+      {
+        expiresIn: "24h", // expires in 24 hours
+      }
+    );
 
-        res.json({
-            status: true,
-            token: token,
-            message: "Registration successful",
-        });
+    res.json({
+      status: true,
+      token: token,
+      message: "Registration successful",
     });
+  });
 };
 
 /*
  *  This function used to find whether public key exist or not
  */
-checkPublicKeyExist = function(req, res, callback) {
-    if (req.body.public_key) {
-        users.find({
-            public_key: req.body.public_key
-        }, function(err, data) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (data.length > 0) {
-                res.status(401).json({
-                    status: false,
-                    message: "Public Key already Exist",
-                    errors: "Public Key already Exist",
-                });
-                return;
-            }
-            callback(true);
-        });
-    } else {
-        res.status(400).json({
+checkPublicKeyExist = function (req, res, callback) {
+  if (req.body.public_key) {
+    users.find(
+      {
+        public_key: req.body.public_key,
+      },
+      function (err, data) {
+        if (err) {
+          res.status(401).json({
             status: false,
-            message: "Public Key is required",
-            errors: "Public Key is required",
-        });
-        return;
-    }
+            message: "Request failed",
+            errors: err,
+          });
+          return;
+        }
+        if (data.length > 0) {
+          res.status(401).json({
+            status: false,
+            message: "Public Key already Exist",
+            errors: "Public Key already Exist",
+          });
+          return;
+        }
+        callback(true);
+      }
+    );
+  } else {
+    res.status(400).json({
+      status: false,
+      message: "Public Key is required",
+      errors: "Public Key is required",
+    });
+    return;
+  }
 };
 
 /*
  *  This function used to find whether user name exist or not
  */
-checkUserNameExist = function(req, res, callback) {
-    if (req.body.username) {
-        users.find({
-            username: req.body.username
-        }, function(err, data) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (data.length > 0) {
-                res.status(401).json({
-                    status: false,
-                    message: "User Name already Exist",
-                    errors: "User Name already Exist",
-                });
-                return;
-            }
-            callback(true);
-        });
-    } else {
-        res.status(400).json({
+checkUserNameExist = function (req, res, callback) {
+  if (req.body.username) {
+    users.find(
+      {
+        username: req.body.username,
+      },
+      function (err, data) {
+        if (err) {
+          res.status(401).json({
             status: false,
-            message: "User Name is required",
-            errors: "User Name is required",
-        });
-        return;
-    }
+            message: "Request failed",
+            errors: err,
+          });
+          return;
+        }
+        if (data.length > 0) {
+          res.status(401).json({
+            status: false,
+            message: "User Name already Exist",
+            errors: "User Name already Exist",
+          });
+          return;
+        }
+        callback(true);
+      }
+    );
+  } else {
+    res.status(400).json({
+      status: false,
+      message: "User Name is required",
+      errors: "User Name is required",
+    });
+    return;
+  }
 };
 
 /*
  *  This function used to find whether email exist or not
  */
-checkEmailExist = function(req, res, callback) {
-    if (req.body.email) {
-        users.find({
-            email: req.body.email
-        }, function(err, data) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (data.length > 0) {
-                res.status(401).json({
-                    status: false,
-                    message: "Email already Exist",
-                    errors: "Email already Exist",
-                });
-                return;
-            }
-            callback(true);
-        });
-    } else {
-        res.status(400).json({
+checkEmailExist = function (req, res, callback) {
+  if (req.body.email) {
+    users.find(
+      {
+        email: req.body.email,
+      },
+      function (err, data) {
+        if (err) {
+          res.status(401).json({
             status: false,
-            message: "Email is required",
-            errors: "Email is required",
-        });
-        return;
-    }
+            message: "Request failed",
+            errors: err,
+          });
+          return;
+        }
+        if (data.length > 0) {
+          res.status(401).json({
+            status: false,
+            message: "Email already Exist",
+            errors: "Email already Exist",
+          });
+          return;
+        }
+        callback(true);
+      }
+    );
+  } else {
+    res.status(400).json({
+      status: false,
+      message: "Email is required",
+      errors: "Email is required",
+    });
+    return;
+  }
 };
 
 /**
@@ -443,68 +470,72 @@ checkEmailExist = function(req, res, callback) {
 /**
  * This is the function which used to login user
  */
-exports.login = function(req, res) {
-    params = {
-        public_key: req.body.public_key
-    };
-    this.loginUser(params, req, res);
+exports.login = function (req, res) {
+  params = {
+    public_key: req.body.public_key,
+  };
+  this.loginUser(params, req, res);
 };
 
 /**
  * This is the function which used to process login user
  */
-loginUser = function(params, req, res) {
-    users.findOne(params, function(err, user) {
-        if (err) {
-            res.status(401).json({
-                status: false,
-                message: "Request failed",
-                errors: err,
-            });
-            return;
-        }
-        if (this.isEmptyObject(user)) {
-            res.status(404).json({
-                status: false,
-                message: "User not found",
-            });
-            return;
-        }
+loginUser = function (params, req, res) {
+  users.findOne(params, function (err, user) {
+    if (err) {
+      res.status(401).json({
+        status: false,
+        message: "Request failed",
+        errors: err,
+      });
+      return;
+    }
+    if (this.isEmptyObject(user)) {
+      res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+      return;
+    }
 
-        if (user.status == "inactive") {
-            res.status(400).json({
-                status: false,
-                message: "Your account has been inactive. contact admin to activate your account",
-            });
-            return;
-        }
-        if (user.status == "blocked") {
-            res.status(400).json({
-                status: false,
-                message: "Your account has been blocked. contact admin to activate your account",
-            });
-            return;
-        }
+    if (user.status == "inactive") {
+      res.status(400).json({
+        status: false,
+        message:
+          "Your account has been inactive. contact admin to activate your account",
+      });
+      return;
+    }
+    if (user.status == "blocked") {
+      res.status(400).json({
+        status: false,
+        message:
+          "Your account has been blocked. contact admin to activate your account",
+      });
+      return;
+    }
 
-        let token = jwt.sign({
-                public_key: user.public_key,
-                username: user.username,
-                email: user.email,
-                display_name: user.first_name,
-                // profile_image: user.profile_image ? user.profile_image : "",
-                status: user.status,
-                role: user.role,
-            },
-            config.secret_key, {
-                expiresIn: "24h", // expires in 24 hours
-            }
-        );
-        res.json({
-            status: true,
-            token: token,
-            message: "Login successful",
-        });
+    let token = jwt.sign(
+      {
+        public_key: user.public_key,
+        username: user.username,
+        email: user.email,
+        display_name: user.first_name,
+        // profile_image: user.profile_image ? user.profile_image : "",
+        status: user.status,
+        role: user.role,
+      },
+      config.secret_key,
+      {
+        expiresIn: "24h", // expires in 24 hours
+      }
+    );
+    res.json({
+      status: true,
+      token: token,
+      message: "Login successful",
     });
+  });
 };
 
 /**
@@ -851,358 +882,622 @@ loginUser = function(params, req, res) {
 /*
  *  This is the function which used to update user profile
  */
-exports.update = function(req, res) {
-    var public_key = req.decoded.public_key;
-    var params = {};
-    params["public_key"] = {
-        $ne: public_key
-    };
-    var query = users.find();
-    if (req.body.email) {
-        params["email"] = req.body.email;
+exports.update = function (req, res) {
+  var public_key = req.decoded.public_key;
+  var params = {};
+  params["public_key"] = {
+    $ne: public_key,
+  };
+  var query = users.find();
+  if (req.body.email) {
+    params["email"] = req.body.email;
+  }
+  if (req.body.username) {
+    params["username"] = req.body.username;
+  }
+  // console.log("params are ", params);
+  query = users.find(params);
+  query.exec(function (err, data) {
+    if (req.body.email || req.body.username) {
+      if (err) {
+        res.status(401).json({
+          status: false,
+          message: "Request failed",
+          errors: err,
+        });
+        return;
+      }
+      // console.log("user data are ", data);
+      if (data.length > 0) {
+        res.status(401).json({
+          status: false,
+          message: "Email or Username already exist",
+        });
+        return;
+      }
     }
-    if (req.body.username) {
-        params["username"] = req.body.username;
-    }
-    // console.log("params are ", params);
-    query = users.find(params);
-    query.exec(function(err, data) {
-        if (req.body.email || req.body.username) {
-            if (err) {
+    users.findOne(
+      { public_key: req.decoded.public_key },
+      async function (err, user) {
+        if (err) {
+          res.status(401).json({
+            status: false,
+            message: "Request failed",
+            errors: err,
+          });
+          return;
+        }
+        if (this.isEmptyObject(user)) {
+          res.status(404).json({
+            status: false,
+            message: "User not found",
+          });
+          return;
+        }
+        if (user.status == "inactive") {
+          res.status(400).json({
+            status: false,
+            message:
+              "Your account has been inactive. Contact admin to activate your account",
+          });
+          return;
+        }
+        if (user.status == "blocked") {
+          res.status(400).json({
+            status: false,
+            message:
+              "Your account has been blocked. Contact admin to activate your account",
+          });
+          return;
+        }
+        if (req.files) {
+          // console.log(req.files.profile_image[0]);
+          if (req.files.profile_image != undefined) {
+            // console.log(req.files.profile_image[0])
+            // const fileStr1 = req.body.profile_image;
+            const prevProfileImage = user.profile_image;
+            // console.log(prevProfileImage);
+            // console.log(defaultProfileImage);
+            if (prevProfileImage != defaultProfileImage) {
+              const tempUrlArray = prevProfileImage.split("/");
+              const cloudinaryPublicId1 = tempUrlArray
+                .slice(tempUrlArray.indexOf("artopera"), tempUrlArray.length)
+                .join("/")
+                .split(".")[0];
+              // console.log(cloudinaryPublicId1);
+              try {
+                let deleteResponse1 = await cloudinary.uploader.destroy(
+                  cloudinaryPublicId1
+                );
+                // console.log(deleteResponse1);
+              } catch (error) {
                 res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
+                  status: false,
+                  message: "Previous profile picture delete failed.",
+                  errors: error,
                 });
                 return;
+              }
             }
-            // console.log("user data are ", data);
-            if (data.length > 0) {
+
+            // // var uploadResponse1;
+            try {
+              let path = "/artopera/user/profile/";
+              let uploadResponse1 = await uploadImages(
+                req.files.profile_image[0].buffer,
+                path
+              );
+              // console.log(uploadResponse1);
+              user.profile_image = uploadResponse1.secure_url;
+            } catch (error) {
+              res.status(401).json({
+                status: false,
+                message: "Profile picture upload failed.",
+                errors: error,
+              });
+              return;
+            }
+          }
+          if (req.files.profile_cover != undefined) {
+            // console.log(req.files.profile_cover[0])
+            // const fileStr2 = req.body.profile_cover;
+            const prevCoverImage = user.profile_cover;
+            // console.log(prevCoverImage);
+            // console.log(defaultProfileCover);
+            if (prevCoverImage != defaultProfileCover) {
+              const tempUrlArray = prevCoverImage.split("/");
+              const cloudinaryPublicId2 = tempUrlArray
+                .slice(tempUrlArray.indexOf("artopera"), tempUrlArray.length)
+                .join("/")
+                .split(".")[0];
+              // console.log(cloudinaryPublicId2);
+              try {
+                let deleteResponse2 = await cloudinary.uploader.destroy(
+                  cloudinaryPublicId2
+                );
+                // console.log(deleteResponse2);
+              } catch (error) {
                 res.status(401).json({
-                    status: false,
-                    message: "Email or Username already exist",
+                  status: false,
+                  message: "Previous profile cover delete failed.",
+                  errors: error,
                 });
                 return;
+              }
             }
+
+            try {
+              let path = "/artopera/user/cover/";
+              let uploadResponse2 = await uploadImages(
+                req.files.profile_cover[0].buffer,
+                path
+              );
+              // console.log(uploadResponse2);
+              user.profile_cover = uploadResponse2.secure_url;
+            } catch (error) {
+              res.status(401).json({
+                status: false,
+                message: "Profile cover upload failed.",
+                error: error,
+              });
+              return;
+            }
+          }
         }
 
-        users.findOne({
-            public_key: req.decoded.public_key
-        }, function(err, user) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (this.isEmptyObject(user)) {
-                res.status(404).json({
-                    status: false,
-                    message: "User not found",
-                });
-                return;
-            }
-            if (user.status == "inactive") {
+        user.display_name = req.body.display_name
+          ? req.body.display_name
+          : user.display_name;
+        // user.profile_image = req.body.profile_image;
+        // user.profile_cover = req.body.profile_cover ? req.body.profile_cover : user.profile_cover;
+        // user.email = req.body.email ? req.body.email : user.email;
+        // user.username = req.body.username ? req.body.username : user.username;
+        user.bio = req.body.bio ? req.body.bio : user.bio;
+        user.facebook_username = req.body.facebook_username
+          ? req.body.facebook_username
+          : user.facebook_username;
+        user.twitter_username = req.body.twitter_username
+          ? req.body.twitter_username
+          : user.twitter_username;
+        user.instagram_username = req.body.instagram_username
+          ? req.body.instagram_username
+          : user.instagram_username;
+        user.modified_date = moment().format();
+        // save the user and check for errors
+        user.save(function (err, userData) {
+          if (err) {
+            res.status(400).json({
+              status: false,
+              message: "Request failed",
+              errors: err,
+            });
+            return;
+          }
+          itemModel.updateMany(
+            { creator_address: req.decoded.public_key },
+            { creator_image: userData.profile_image },
+            function (error, itemObj) {
+              if (error) {
                 res.status(400).json({
-                    status: false,
-                    message: "Your account has been inactive. Contact admin to activate your account",
+                  status: false,
+                  message: "Request failed",
+                  errors: error,
                 });
                 return;
+              } else {
+                itemModel.updateMany(
+                  { current_owner: req.decoded.public_key },
+                  { owner_image: userData.profile_image },
+                  function (err, itemObj) {
+                    if (error) {
+                      res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors: err,
+                      });
+                      return;
+                    } else {
+                      let token = jwt.sign(
+                        {
+                          public_key: userData.public_key,
+                          username: userData.username,
+                          email: userData.email,
+                          display_name: userData.display_name,
+                          // profile_image: user.profile_image ? user.profile_image : "",
+                          status: userData.status,
+                          role: userData.role,
+                        },
+                        config.secret_key,
+                        {
+                          expiresIn: "24h", // expires in 24 hours
+                        }
+                      );
+                      res.json({
+                        status: true,
+                        token: token,
+                        message: "profile updated successfully",
+                      });
+                    }
+                  }
+                );
+              }
             }
-            if (user.status == "blocked") {
-                res.status(400).json({
-                    status: false,
-                    message: "Your account has been blocked. Contact admin to activate your account",
-                });
-                return;
-            }
-            
-
-            user.display_name = req.body.display_name ?
-                req.body.display_name :
-                user.display_name;
-
-            if (req.body.profile_image) {
-                user.profile_image = req.body.profile_image;
-                itemModel.updateMany({creator_address: req.decoded.public_key}, {creator_image: req.body.profile_image}, function(error, itemObj){
-                    itemModel.updateMany({current_owner: req.decoded.public_key}, {owner_image: req.body.profile_image}, function(err, itemObj) {
-                        user.profile_cover = req.body.profile_cover ?
-                            req.body.profile_cover :
-                            user.profile_cover;
-                        // user.email = req.body.email ? req.body.email : user.email;
-                        // user.username = req.body.username ? req.body.username : user.username;
-                        user.bio = req.body.bio ? req.body.bio : user.bio;
-                        user.facebook_username = req.body.facebook_username ?
-                            req.body.facebook_username :
-                            user.facebook_username;
-                        user.twitter_username = req.body.twitter_username ?
-                            req.body.twitter_username :
-                            user.twitter_username;
-                        user.instagram_username = req.body.instagram_username ?
-                            req.body.instagram_username :
-                            user.instagram_username;
-
-                        user.modified_date = moment().format();
-                        // save the user and check for errors
-                        user.save(function(err, user) {
-                            if (err) {
-                                res.status(400).json({
-                                    status: false,
-                                    message: "Request failed",
-                                    errors: err,
-                                });
-                                return;
-                            }
-
-                            let token = jwt.sign({
-                                    public_key: user.public_key,
-                                    username: user.username,
-                                    email: user.email,
-                                    display_name: user.display_name,
-                                    // profile_image: user.profile_image ? user.profile_image : "",
-                                    status: user.status,
-                                    role: user.role,
-                                },
-                                config.secret_key, {
-                                    expiresIn: "24h", // expires in 24 hours
-                                }
-                            );
-                            res.json({
-                                status: true,
-                                token: token,
-                                message: "profile updated successfully",
-                            });
-                        });
-                    });
-                });
-            }    
+          );
         });
-    });
+      }
+    );
+  });
 };
+
+// backup
+// exports.update = function(req, res) {
+//     var public_key = req.decoded.public_key;
+//     var params = {};
+//     params["public_key"] = {
+//         $ne: public_key
+//     };
+//     var query = users.find();
+//     if (req.body.email) {
+//         params["email"] = req.body.email;
+//     }
+//     if (req.body.username) {
+//         params["username"] = req.body.username;
+//     }
+//     // console.log("params are ", params);
+//     query = users.find(params);
+//     query.exec(function(err, data) {
+//         if (req.body.email || req.body.username) {
+//             if (err) {
+//                 res.status(401).json({
+//                     status: false,
+//                     message: "Request failed",
+//                     errors: err,
+//                 });
+//                 return;
+//             }
+//             // console.log("user data are ", data);
+//             if (data.length > 0) {
+//                 res.status(401).json({
+//                     status: false,
+//                     message: "Email or Username already exist",
+//                 });
+//                 return;
+//             }
+//         }
+
+//         users.findOne({
+//             public_key: req.decoded.public_key
+//         }, function(err, user) {
+//             if (err) {
+//                 res.status(401).json({
+//                     status: false,
+//                     message: "Request failed",
+//                     errors: err,
+//                 });
+//                 return;
+//             }
+//             if (this.isEmptyObject(user)) {
+//                 res.status(404).json({
+//                     status: false,
+//                     message: "User not found",
+//                 });
+//                 return;
+//             }
+//             if (user.status == "inactive") {
+//                 res.status(400).json({
+//                     status: false,
+//                     message: "Your account has been inactive. Contact admin to activate your account",
+//                 });
+//                 return;
+//             }
+//             if (user.status == "blocked") {
+//                 res.status(400).json({
+//                     status: false,
+//                     message: "Your account has been blocked. Contact admin to activate your account",
+//                 });
+//                 return;
+//             }
+
+//             user.display_name = req.body.display_name ?
+//                 req.body.display_name :
+//                 user.display_name;
+
+//             if (req.body.profile_image) {
+//                 user.profile_image = req.body.profile_image;
+//                 itemModel.updateMany({creator_address: req.decoded.public_key}, {creator_image: req.body.profile_image}, function(error, itemObj){
+//                     itemModel.updateMany({current_owner: req.decoded.public_key}, {owner_image: req.body.profile_image}, function(err, itemObj) {
+//                         user.profile_cover = req.body.profile_cover ?
+//                             req.body.profile_cover :
+//                             user.profile_cover;
+//                         // user.email = req.body.email ? req.body.email : user.email;
+//                         // user.username = req.body.username ? req.body.username : user.username;
+//                         user.bio = req.body.bio ? req.body.bio : user.bio;
+//                         user.facebook_username = req.body.facebook_username ?
+//                             req.body.facebook_username :
+//                             user.facebook_username;
+//                         user.twitter_username = req.body.twitter_username ?
+//                             req.body.twitter_username :
+//                             user.twitter_username;
+//                         user.instagram_username = req.body.instagram_username ?
+//                             req.body.instagram_username :
+//                             user.instagram_username;
+
+//                         user.modified_date = moment().format();
+//                         // save the user and check for errors
+//                         user.save(function(err, user) {
+//                             if (err) {
+//                                 res.status(400).json({
+//                                     status: false,
+//                                     message: "Request failed",
+//                                     errors: err,
+//                                 });
+//                                 return;
+//                             }
+
+//                             let token = jwt.sign({
+//                                     public_key: user.public_key,
+//                                     username: user.username,
+//                                     email: user.email,
+//                                     display_name: user.display_name,
+//                                     // profile_image: user.profile_image ? user.profile_image : "",
+//                                     status: user.status,
+//                                     role: user.role,
+//                                 },
+//                                 config.secret_key, {
+//                                     expiresIn: "24h", // expires in 24 hours
+//                                 }
+//                             );
+//                             res.json({
+//                                 status: true,
+//                                 token: token,
+//                                 message: "profile updated successfully",
+//                             });
+//                         });
+//                     });
+//                 });
+//             }
+//         });
+//     });
+// };
 
 /*
  *  This is the function which used to update user profile
  */
-exports.updatesettings = function(req, res) {
-    users.findOne({
-        public_key: req.decoded.public_key
-    }, function(err, user) {
-        if (err) {
-            res.status(401).json({
-                status: false,
-                message: "Request failed",
-                errors: err,
-            });
-            return;
-        }
-        if (this.isEmptyObject(user)) {
-            res.status(404).json({
-                status: false,
-                message: "User not found",
-            });
-            return;
-        }
-        if (user.status == "inactive") {
-            res.status(400).json({
-                status: false,
-                message: "Your account has been inactive. Contact admin to activate your account",
-            });
-            return;
-        }
-        if (user.status == "blocked") {
-            res.status(400).json({
-                status: false,
-                message: "Your account has been blocked. Contact admin to activate your account",
-            });
-            return;
-        }
-        user.is_notification = req.body.is_notification;
-        user.modified_date = moment().format();
-        user.save(function(err, user) {
-            if (err) {
-                res.status(400).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            res.json({
-                status: true,
-                message: "profile settings updated successfully",
-            });
+exports.updatesettings = function (req, res) {
+  users.findOne(
+    {
+      public_key: req.decoded.public_key,
+    },
+    function (err, user) {
+      if (err) {
+        res.status(401).json({
+          status: false,
+          message: "Request failed",
+          errors: err,
         });
-    });
-};
-
-/**
- *   This is the function check object is empty or not
- */
-exports.getUserInfoByID = function(public_key, callback) {
-    users.findOne({
-        public_key: public_key
-    }).exec(function(err, user) {
+        return;
+      }
+      if (this.isEmptyObject(user)) {
+        res.status(404).json({
+          status: false,
+          message: "User not found",
+        });
+        return;
+      }
+      if (user.status == "inactive") {
+        res.status(400).json({
+          status: false,
+          message:
+            "Your account has been inactive. Contact admin to activate your account",
+        });
+        return;
+      }
+      if (user.status == "blocked") {
+        res.status(400).json({
+          status: false,
+          message:
+            "Your account has been blocked. Contact admin to activate your account",
+        });
+        return;
+      }
+      user.is_notification = req.body.is_notification;
+      user.modified_date = moment().format();
+      user.save(function (err, user) {
         if (err) {
-            callback(err, null);
-            return;
+          res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors: err,
+          });
+          return;
         }
-        if (this.isEmptyObject(user)) {
-            callback({
-                    status: false,
-                    message: "Request failed",
-                    errors: "User not found",
-                },
-                null
-            );
-            return;
-        }
-        user.profile_image = user.profile_image ? user.profile_image : "";
-        callback(null, user);
+        res.json({
+          status: true,
+          message: "profile settings updated successfully",
+        });
+      });
+    }
+  );
+};
+
+/**
+ *   This is the function check object is empty or not
+ */
+exports.getUserInfoByID = function (public_key, callback) {
+  users
+    .findOne({
+      public_key: public_key,
+    })
+    .exec(function (err, user) {
+      if (err) {
+        callback(err, null);
+        return;
+      }
+      if (this.isEmptyObject(user)) {
+        callback(
+          {
+            status: false,
+            message: "Request failed",
+            errors: "User not found",
+          },
+          null
+        );
+        return;
+      }
+      user.profile_image = user.profile_image ? user.profile_image : "";
+      callback(null, user);
     });
 };
 
 /**
  *   This is the function check object is empty or not
  */
-isEmptyObject = function(obj) {
-    for (var key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            return false;
-        }
+isEmptyObject = function (obj) {
+  for (var key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      return false;
     }
-    return true;
+  }
+  return true;
 };
 
 /*
  *   This is the function which used to create new user from admin
  */
-exports.createUser = function(req, res) {
-    this.checkUserNameExist(req, res, function(result) {
-        if (result) {
-            this.checkEmailExist(req, res, function(result) {
-                this.createUser(req, res);
-            });
-        }
-    });
+exports.createUser = function (req, res) {
+  this.checkUserNameExist(req, res, function (result) {
+    if (result) {
+      this.checkEmailExist(req, res, function (result) {
+        this.createUser(req, res);
+      });
+    }
+  });
 };
 
 /**
  *    This is the function handle user registration for admin
  */
-createUser = function(req, res) {
-    var user = new users();
-    user.username = req.body.username ? req.body.username : "";
-    user.email = req.body.email ? req.body.email : "";
-    user.display_name = req.body.display_name ? req.body.display_name : "";
-    user.public_key = req.body.public_key ? req.body.public_key : "";
-    user.bio = req.body.bio ? req.body.bio : "";
-    user.profile_image = req.body.profile_image ? req.body.profile_image : "";
-    user.profile_cover = req.body.profile_cover ? req.body.profile_cover : "";
-    user.facebook_username = req.body.facebook_username ? req.body.facebook_username : "";
-    user.twitter_username = req.body.twitter_username ? req.body.twitter_username : "";
-    user.instagram_username = req.body.instagram_username ? req.body.instagram_username : "";
-    user.status = req.body.status ? req.body.status : "active";
-    user.save(function(err, user) {
-        if (err) {
-            res.status(401).json({
-                status: false,
-                message: "Request failed",
-                errors: err,
-            });
-            return;
-        }
+createUser = function (req, res) {
+  var user = new users();
+  user.username = req.body.username ? req.body.username : "";
+  user.email = req.body.email ? req.body.email : "";
+  user.display_name = req.body.display_name ? req.body.display_name : "";
+  user.public_key = req.body.public_key ? req.body.public_key : "";
+  user.bio = req.body.bio ? req.body.bio : "";
+  user.profile_image = req.body.profile_image ? req.body.profile_image : "";
+  user.profile_cover = req.body.profile_cover ? req.body.profile_cover : "";
+  user.facebook_username = req.body.facebook_username
+    ? req.body.facebook_username
+    : "";
+  user.twitter_username = req.body.twitter_username
+    ? req.body.twitter_username
+    : "";
+  user.instagram_username = req.body.instagram_username
+    ? req.body.instagram_username
+    : "";
+  user.status = req.body.status ? req.body.status : "active";
+  user.save(function (err, user) {
+    if (err) {
+      res.status(401).json({
+        status: false,
+        message: "Request failed",
+        errors: err,
+      });
+      return;
+    }
 
-        res.json({
-            status: true,
-            message: "Registration successful",
-        });
+    res.json({
+      status: true,
+      message: "Registration successful",
     });
+  });
 };
 
 /*
  *   This is the function which used to update user profile from admin
  */
-exports.updateUser = function(req, res) {
-    var public_key = req.body.public_key;
-    var params = {};
-    params["public_key"] = {
-        $ne: public_key
-    };
-    var query = users.find();
-    if (req.body.email) {
-        params["email"] = req.body.email;
-    }
-    if (req.body.username) {
-        params["username"] = req.body.username;
-    }
-    query = users.find(params);
-    query.exec(function(err, data) {
-        if (req.body.email || req.body.username) {
-            if (err) {
-                res.status(401).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (data.length > 0) {
-                res.status(401).json({
-                    status: false,
-                    message: "Email or Username already exist",
-                });
-                return;
-            }
-        }
-
-        users.findOne({
-            public_key: req.body.public_key
-        }, function(err, user) {
-            if (err) {
-                res.status(400).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            }
-            if (this.isEmptyObject(user)) {
-                res.status(404).json({
-                    status: false,
-                    message: "User not found",
-                });
-                return;
-            }
-            user.display_name = req.body.display_name ?
-                req.body.display_name :
-                user.display_name;
-            user.profile_image = req.body.profile_image ?
-                req.body.profile_image :
-                user.profile_image;
-            user.profile_cover = req.body.profile_cover ?
-                req.body.profile_cover :
-                user.profile_cover;
-            user.email = req.body.email ? req.body.email : user.email;
-            user.username = req.body.username ? req.body.username : user.username;
-            user.bio = req.body.bio ? req.body.bio : user.bio;
-            user.status = req.body.status ? req.body.status : user.status;
-            user.modified_date = moment().format();
-            user.save(function(err, user) {
-                if (err) {
-                    res.status(400).json({
-                        status: false,
-                        message: "Request failed",
-                        errors: err,
-                    });
-                    return;
-                }
-                res.json({
-                    status: true,
-                    message: "profile updated successfully",
-                });
-            });
+exports.updateUser = function (req, res) {
+  var public_key = req.body.public_key;
+  var params = {};
+  params["public_key"] = {
+    $ne: public_key,
+  };
+  var query = users.find();
+  if (req.body.email) {
+    params["email"] = req.body.email;
+  }
+  if (req.body.username) {
+    params["username"] = req.body.username;
+  }
+  query = users.find(params);
+  query.exec(function (err, data) {
+    if (req.body.email || req.body.username) {
+      if (err) {
+        res.status(401).json({
+          status: false,
+          message: "Request failed",
+          errors: err,
         });
-    });
+        return;
+      }
+      if (data.length > 0) {
+        res.status(401).json({
+          status: false,
+          message: "Email or Username already exist",
+        });
+        return;
+      }
+    }
+
+    users.findOne(
+      {
+        public_key: req.body.public_key,
+      },
+      function (err, user) {
+        if (err) {
+          res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors: err,
+          });
+          return;
+        }
+        if (this.isEmptyObject(user)) {
+          res.status(404).json({
+            status: false,
+            message: "User not found",
+          });
+          return;
+        }
+        user.display_name = req.body.display_name
+          ? req.body.display_name
+          : user.display_name;
+        user.profile_image = req.body.profile_image
+          ? req.body.profile_image
+          : user.profile_image;
+        user.profile_cover = req.body.profile_cover
+          ? req.body.profile_cover
+          : user.profile_cover;
+        user.email = req.body.email ? req.body.email : user.email;
+        user.username = req.body.username ? req.body.username : user.username;
+        user.bio = req.body.bio ? req.body.bio : user.bio;
+        user.status = req.body.status ? req.body.status : user.status;
+        user.modified_date = moment().format();
+        user.save(function (err, user) {
+          if (err) {
+            res.status(400).json({
+              status: false,
+              message: "Request failed",
+              errors: err,
+            });
+            return;
+          }
+          res.json({
+            status: true,
+            message: "profile updated successfully",
+          });
+        });
+      }
+    );
+  });
 };

@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : categoryController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all category related api function.
 */
 
 var categories = require('./../model/categoryModel');
@@ -28,7 +24,6 @@ exports.getList = async function(req,res) {
         });
     })
 }
-
 
 /*
 *  This is the function which used to retreive category detail by category id

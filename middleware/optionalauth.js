@@ -1,20 +1,16 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : auth.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to check whether user is authorized or not to use private API.
 */
 
 let jwt = require('jsonwebtoken');
 const config = require('./../helper/config');
 
 let optionalauth = (req, res, next) => {
- // console.log("token is ", req.headers)
-  let token = req.headers['x-access-token'] || req.headers['authorization']; 
+  // console.log("token is ", req.headers)
+  let token = req.headers['x-access-token'] || req.headers['authorization'];
 
-  if(token != null) {
+  if (token != null) {
     if (token.startsWith('Bearer ')) {
       // Remove Bearer from string
       token = token.slice(7, token.length);
@@ -40,7 +36,7 @@ let optionalauth = (req, res, next) => {
     }
   } else {
     req.decoded = {
-      user_id : null
+      user_id: null
     }
     next();
   }

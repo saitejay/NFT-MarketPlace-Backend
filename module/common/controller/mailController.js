@@ -1,11 +1,8 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : mailController.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to send email notificaiton to user
 */
+
 var nodemailer = require('nodemailer');
 var handlebars = require('handlebars');
 var fs = require('fs');

@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
+Project : NFT-marketplace
 FileName : userModel.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define user collection that will communicate and process user information with mongodb through mongoose ODM.
 */
 
 var mongoose = require("mongoose");

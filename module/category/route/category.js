@@ -1,10 +1,6 @@
 /*
-Project : Cryptotrades
-FileName : route.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the file which used to define all route releated to category api request.
+Project : NFT-marketplace
+FileName : category.js
 */
 
 var express = require('express')

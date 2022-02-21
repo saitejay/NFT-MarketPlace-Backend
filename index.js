@@ -1,10 +1,7 @@
 /*
-Project : Cryptotrades
+/*
+Project : NFT-marketplace
 FileName : index.js
-Author : LinkWell
-File Created : 21/07/2021
-CopyRights : LinkWell
-Purpose : This is the main file which is first executed when running nodejs application through command line. It will load all relevant packages and depedencies for API request.
 */
 
 const express = require("express");
@@ -29,8 +26,17 @@ const swaggerDocument = require("./swagger.json");
 global.__basedir = __dirname;
 // app.use(express.json({limit: '50mb'}));
 // app.use(express.urlencoded({limit: '50mb'}));
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+app.use(
+    bodyParser.json({
+        limit: "100mb",
+    })
+);
+app.use(
+    bodyParser.urlencoded({
+        extended: true,
+        limit: "100mb",
+    })
+);
 app.use(express.static(__dirname + "/media"));
 app.use(cors());
 
@@ -43,27 +49,32 @@ app.use(cors());
  * Below lines used to connect databse moongoose ORM
  */
 try {
-  mongoose.connect(
-    "mongodb+srv://" +
-      config.db.username +
-      ":" +
-      config.db.password +
-      "@cluster0.ll6t4.mongodb.net/" +
-      config.db.name,
-    { keepAlive: true, useNewUrlParser: true, useCreateIndex: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false }
-  );
+    mongoose.connect(
+        "mongodb+srv://" +
+            config.db.username +
+            ":" +
+            config.db.password +
+            "@cluster0.ll6t4.mongodb.net/" +
+            config.db.name,
+        {
+            keepAlive: true,
+            useNewUrlParser: true,
+            useCreateIndex: true,
+            useUnifiedTopology: true,
+            useCreateIndex: true,
+            useFindAndModify: false,
+        }
+    );
 
-
-
-  var db = mongoose.connection;
-  // Added check for DB connection
-  if (!db) {
-    console.log("Error connecting db");
-  } else {
-    console.log("Db connected successfully");
-  }
+    var db = mongoose.connection;
+    // Added check for DB connection
+    if (!db) {
+        console.log("Error connecting db");
+    } else {
+        console.log("Db connected successfully");
+    }
 } catch (error) {
-  console.log(error);
+    console.log(error);
 }
 
 /*
@@ -83,11 +94,11 @@ app.use("/auction", auction);
  * Below lines used to handle invalid api calls
  */
 app.use(function (req, res, next) {
-  res.status(404).send("Sorry can't find that!");
+    res.status(404).send("Sorry can't find that!");
 });
 app.use(function (err, req, res, next) {
-  console.error(err.stack);
-  res.status(500).send("Something broke!");
+    console.error(err.stack);
+    res.status(500).send("Something broke!");
 });
 
 /*
@@ -95,5 +106,5 @@ app.use(function (err, req, res, next) {
  */
 //https.createServer(options, app).listen(config.app.port, () => console.log(`Cryptotrades app listening on port ${config.app.port}!`));
 app.listen(config.app.port, () =>
-  console.log(`Cryptotrades app listening on port ${config.app.port}!`)
+    console.log(`Cryptotrades app listening on port ${config.app.port}!`)
 );
