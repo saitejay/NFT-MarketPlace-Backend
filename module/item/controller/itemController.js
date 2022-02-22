@@ -171,6 +171,7 @@ exports.add = async function (req, res) {
     collections.findOne(
         {
             collection_keyword: req.body.collection_keyword,
+            author_address: req.decoded.public_key
         },
         function (err, collection) {
             if (err || !collection) {
