@@ -6,6 +6,15 @@ FileName : categoryController.js
 var categories = require('./../model/categoryModel');
 var validator = require('validator');
 const { validationResult } = require('express-validator');
+const cloudinary = require('cloudinary').v2;
+const config = require('../../../helper/config');
+const { uploadImages } = require('../../../helper/uploadToCloudinary');
+
+cloudinary.config({
+    cloud_name: config.cloud_name,
+    api_key: config.api_key,
+    api_secret: config.api_secret,
+});
 
 /*
 *  This is the function which used to retreive active category list
@@ -81,8 +90,8 @@ exports.getAdminList  = function(req,res) {
 /**
  * This is the function which used to add category from admin
  */
-exports.add  = function(req,res) {
-    const errors = validationResult(req);
+exports.add  = async function(req,res) {
+    const errors = validationResult(req.body);
     if (!errors.isEmpty()) {
         res.status(400).json({
             status: false,
@@ -92,8 +101,22 @@ exports.add  = function(req,res) {
         return;
     }  
     var category = new categories();
+    // console.log(req.body);
+    // console.log(req.file);
     category.title = req.body.title;
-    category.category_image = req.body.category_image;
+    try {
+        let path = "/artopera/categories/";
+        let uploadResponse = await uploadImages(req.file.buffer, path);
+        // console.log(uploadResponse);
+        category.category_image = uploadResponse.secure_url;
+    } catch (error) {
+        res.status(401).json({
+            status: false,
+            message: "Category image upload failed.",
+            errors: error,
+        });
+        return;
+    }
     category.status = req.body.status;
     category.save(function (err , categoryObj) {
         if (err) {
@@ -115,7 +138,16 @@ exports.add  = function(req,res) {
  *  This is the function which used to update category 
  */
 exports.edit  = function(req,res) {
-    categories.findOne({_id:req.body.category_id}, function (err, category) {
+    const errors = validationResult(req.body);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    categories.findOne({_id:req.body.category_id}, async function (err, category) {
         if (err || !category) {
             res.json({
                 status: false,
@@ -124,8 +156,50 @@ exports.edit  = function(req,res) {
             });
             return;
         } else {
+            // console.log(req.body);
             category.title = req.body.title ?  req.body.title : category.title;
-            category.category_image = req.body.category_image ?  req.body.category_image : category.category_image;
+            // category.category_image = req.body.category_image ?  req.body.category_image : category.category_image;
+            if (req.file) {
+                // console.log(req.file);
+                const prevImage = category.category_image;
+                // console.log(prevImage);
+                const tempUrlArray = prevImage.split("/");
+                const cloudinaryPublicId = tempUrlArray
+                    .slice(
+                        tempUrlArray.indexOf("artopera"),
+                        tempUrlArray.length
+                    )
+                    .join("/")
+                    .split(".")[0];
+                // console.log(cloudinaryPublicId);
+                try {
+                    let deleteResponse =
+                        await cloudinary.uploader.destroy(
+                            cloudinaryPublicId
+                        );
+                    // console.log(deleteResponse);
+                } catch (error) {
+                    res.status(401).json({
+                        status: false,
+                        message: "Previous category image delete failed.",
+                        errors: error,
+                    });
+                    return;
+                }
+                try {
+                    let path = "/artopera/categories/";
+                    let uploadResponse = await uploadImages(req.file.buffer, path);
+                    // console.log(uploadResponse);
+                    category.category_image = uploadResponse.secure_url;
+                } catch (error) {
+                    res.status(401).json({
+                        status: false,
+                        message: "Category image upload failed.",
+                        errors: error,
+                    });
+                    return;
+                }
+            }
             category.status = req.body.status;
             category.save(function (err , category) {
                 if (err) {
@@ -151,7 +225,16 @@ exports.edit  = function(req,res) {
  *  This is the function which used to delete category 
  */
  exports.delete  = function(req,res) {
-    categories.findOne({_id:req.body.category_id}, function (err, category) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors:errors.array()
+        });
+        return;
+    }
+    categories.findOne({_id:req.body.category_id}, async function (err, category) {
         if (err || !category) {
             res.json({
                 status: false,
@@ -160,6 +243,31 @@ exports.edit  = function(req,res) {
             });
             return;
         } else {
+            const prevImage = category.category_image;
+            // console.log(prevImage);
+            const tempUrlArray = prevImage.split("/");
+            const cloudinaryPublicId = tempUrlArray
+                .slice(
+                    tempUrlArray.indexOf("artopera"),
+                    tempUrlArray.length
+                )
+                .join("/")
+                .split(".")[0];
+            // console.log(cloudinaryPublicId);
+            try {
+                let deleteResponse =
+                    await cloudinary.uploader.destroy(
+                        cloudinaryPublicId
+                    );
+                // console.log(deleteResponse);
+            } catch (error) {
+                res.status(401).json({
+                    status: false,
+                    message: "Previous category image delete failed.",
+                    errors: error,
+                });
+                return;
+            }
             categories.deleteOne({_id:req.body.category_id},function(err) {
                 res.json({
                     status: true,
@@ -169,13 +277,3 @@ exports.edit  = function(req,res) {
         }
     });
  }
-
-
-
-
-
-
-
-
-
-
