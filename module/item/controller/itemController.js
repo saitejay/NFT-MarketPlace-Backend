@@ -28,6 +28,8 @@ const {
     uploadStreamableFiles,
     uploadDocumentFiles,
 } = require("../../../helper/uploadToCloudinary");
+const { forEach } = require("lodash");
+const { type } = require("os");
 // const { Collection } = require('mongoose');
 // const { collection } = require('../model/itemModel');
 // require('util').inspect.defaultOptions.depth = null
@@ -189,7 +191,7 @@ exports.add = async function (req, res) {
             item.collection_address = collection.collection_address;
             users.findOne(
                 {
-                    public_key: req.decoded.public_key,
+                    public_key: req.decoded.public_key, status: "active"
                 },
                 function (err, userdetails) {
                     if (err) {
@@ -799,30 +801,33 @@ exports.mint_token = function (req, res) {
         });
         return;
     }
-    items.findOne(
-        {
-            _id: req.body._id,
-            creator_address: req.decoded.public_key,
-            status: "created",
-        },
-        function (err, itemObj) {
-            if (err) {
-                res.status(400).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            } else if (!itemObj) {
-                res.status(404).json({
-                    status: false,
-                    message: "Item not found",
-                });
-            } else {
-                itemObj.status = "minted";
-                itemObj.minted_date = new Date();
-                itemObj.token_id = req.body.token_id;
-                itemObj.save(function (err, result) {
+    items.findOne({_id: req.body._id, creator_address: req.decoded.public_key, status: "created"}, function (err, itemObj) {
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err,
+            });
+            return;
+        } else if (!itemObj) {
+            res.status(404).json({
+                status: false,
+                message: "Item not found",
+            });
+        } else {
+            itemObj.status = "minted";
+            itemObj.minted_date = new Date();
+            itemObj.token_id = req.body.token_id;
+            itemObj.save(function (err, result) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors: err,
+                    });
+                    return;
+                }
+                users.findOne({public_key: req.decoded.public_key, status: "active"}, function(err, user){
                     if (err) {
                         res.status(400).json({
                             status: false,
@@ -830,16 +835,44 @@ exports.mint_token = function (req, res) {
                             errors: err,
                         });
                         return;
+                    } else if(!user){
+                        res.status(404).json({
+                            status: false,
+                            message: "User not found"
+                        });
+                    } else{
+                        var history = new histories();
+                        // history.item_id = req.body.item_id;
+                        history.collection_id = itemObj.collection_id;
+                        history.collection_address = itemObj.collection_address;
+                        history.token_id = itemObj.token_id;
+                        history.from_address = "0x0000000000000000000000000000000000000000";
+                        history.sender_name = 'NullAddress'
+                        history.to_address = req.decoded.public_key;
+                        history.receiver_name = user.username
+                        history.transaction_hash = req.body.transaction_hash;
+                        history.price = itemObj.price;
+                        history.history_type = "Minted";
+                        history.save(function (err, historyObj) {
+                            if (err) {
+                                res.status(400).json({
+                                    status: false,
+                                    message: "Request failed",
+                                    errors: err,
+                                });
+                                return;
+                            }
+                            res.json({
+                                status: true,
+                                message: "Item minted successfully",
+                                result: result,
+                            });
+                        });
                     }
-                    res.json({
-                        status: true,
-                        message: "Item minted successfully",
-                        result: result,
-                    });
-                });
-            }
+                })
+            });
         }
-    );
+    });
 };
 
 /*
@@ -881,45 +914,44 @@ exports.publish = function (req, res) {
                     message: "Item not found",
                 });
             } else {
-                userController.getUserInfoByID(
-                    req.decoded.public_key,
-                    function (err, user) {
-                        var history = new histories();
-                        history.item_id = req.body.item_id;
-                        history.collection_id = item.collection_id;
-                        history.from_address =
-                            "0x0000000000000000000000000000000000000000";
-                        history.to_address = user.public_key;
-                        history.transaction_hash = req.body.transaction_hash;
-                        history.price = item.price;
-                        history.history_type = "minted";
-                        history.save(function (err, historyObj) {
-                            // console.log(historyObj);
-                            var price = new prices();
-                            price.item_id = req.body.item_id;
-                            price.price = item.price;
-                            price.user_address = user.public_key;
-                            items.findOne(
-                                {
-                                    _id: req.body._id,
-                                    creator_address: req.decoded.public_key,
-                                    status: "active",
-                                },
-                                function (err, itemObj) {
-                                    price.save(function (err, priceObj) {
-                                        // console.log(priceObj);
-                                        res.json({
-                                            status: true,
-                                            message:
-                                                "Item published successfully",
-                                            result: itemObj,
-                                        });
+                userController.getUserInfoByID(req.decoded.public_key, function (err, user) {
+                    var history = new histories();
+                    // history.item_id = req.body.item_id;
+                    history.collection_id = item.collection_id;
+                    history.collection_address = item.collection_address;
+                    history.token_id = item.token_id;
+                    history.from_address = user.public_key;
+                    history.sender_name = user.username;
+                    // history.to_address = user.public_key;
+                    // history.transaction_hash = req.body.transaction_hash;
+                    history.price = item.price;
+                    history.history_type = "List";
+                    history.save(function (err, historyObj) {
+                        // console.log(historyObj);
+                        var price = new prices();
+                        price.item_id = req.body.item_id;
+                        price.price = item.price;
+                        price.user_address = user.public_key;
+                        items.findOne(
+                            {
+                                _id: req.body._id,
+                                creator_address: req.decoded.public_key,
+                                status: "active",
+                            },
+                            function (err, itemObj) {
+                                price.save(function (err, priceObj) {
+                                    // console.log(priceObj);
+                                    res.json({
+                                        status: true,
+                                        message:
+                                            "Item published successfully",
+                                        result: itemObj,
                                     });
-                                }
-                            );
-                        });
-                    }
-                );
+                                });
+                            }
+                        );
+                    });
+                });
             }
         }
     );
@@ -990,39 +1022,49 @@ exports.purchase = function (req, res) {
         });
         return;
     }
-    items
-        .findOne({
-            item_id: req.body.item_id,
-            status: "active",
-            is_on_auction: false,
-        })
-        .exec(function (err, item) {
-            if (err) {
-                res.status(400).json({
-                    status: false,
-                    message: "Request failed",
-                    errors: err,
-                });
-                return;
-            } else if (!item) {
-                res.status(404).json({
-                    status: false,
-                    message: "Item not found",
-                });
-                return;
-            } else if (item.current_owner == req.decoded.public_key) {
-                res.status(401).json({
-                    status: false,
-                    message: "You are not allowed to purchase on your NFT item",
-                });
-                return;
-            } else {
-                let prev_owner = item.current_owner;
-                users.findOne(
-                    {
-                        public_key: req.decoded.public_key,
-                    },
-                    function (err, user) {
+    items.findOne({item_id: req.body.item_id, status: "active", is_on_auction: false}).exec(function (err, item) {
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err,
+            });
+            return;
+        } else if (!item) {
+            res.status(404).json({
+                status: false,
+                message: "Item not found",
+            });
+            return;
+        } else if (item.current_owner == req.decoded.public_key) {
+            res.status(401).json({
+                status: false,
+                message: "You are not allowed to purchase on your NFT item",
+            });
+            return;
+        } else {
+            let prev_owner = item.current_owner;
+            let prev_owner_name = item.current_owner_name;
+            users.findOne({public_key: req.decoded.public_key, status: "active"}, function (err, user) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors: err,
+                    });
+                    return;
+                } else if (!user) {
+                    res.status(404).json({
+                        status: false,
+                        message: "User not found",
+                    });
+                    return;
+                } else {
+                    item.status = "inactive";
+                    item.current_owner = req.decoded.public_key;
+                    item.owner_image = user.profile_image;
+                    item.current_owner_name = user.username;
+                    collections.findOne({collection_id: item.collection_id}, function (err, collection) {
                         if (err) {
                             res.status(400).json({
                                 status: false,
@@ -1030,126 +1072,107 @@ exports.purchase = function (req, res) {
                                 errors: err,
                             });
                             return;
-                        } else if (!user) {
+                        } else if (!collection) {
                             res.status(404).json({
                                 status: false,
-                                message: "User not found",
+                                message: "Collection not found",
                             });
                             return;
                         } else {
-                            item.status = "inactive";
-                            item.current_owner = req.decoded.public_key;
-                            item.owner_image = user.profile_image;
-                            item.current_owner_name = user.username;
-                            collections.findOne(
-                                {
-                                    collection_id: item.collection_id,
-                                },
-                                function (err, collection) {
+                            collection.volume_traded = collection.volume_traded + item.price;
+                            collection.save(function (err,collectionsaveObj) {
+                                if (err) {
+                                    res.status(400).json({
+                                        status: false,
+                                        message: "Request failed",
+                                        errors: err,
+                                    });
+                                    return;
+                                }
+                                item.save(function (err, itemObj) {
                                     if (err) {
                                         res.status(400).json({
                                             status: false,
-                                            message: "Request failed",
+                                            message:
+                                                "Request failed",
                                             errors: err,
                                         });
                                         return;
-                                    } else if (!collection) {
-                                        res.status(404).json({
-                                            status: false,
-                                            message: "Collection not found",
-                                        });
-                                        return;
-                                    } else {
-                                        collection.volume_traded =
-                                            collection.volume_traded +
-                                            item.price;
-                                        collection.save(function (
-                                            err,
-                                            collectionsaveObj
-                                        ) {
+                                    }
+                                    let saleHistory = new histories();
+                                    // history.item_id = item.item_id;
+                                    saleHistory.collection_id = item.collection_id;
+                                    saleHistory.collection_address = item.collection_address;
+                                    saleHistory.token_id = item.token_id;
+                                    saleHistory.from_address = prev_owner;
+                                    saleHistory.sender_name = prev_owner_name;
+                                    saleHistory.to_address = req.decoded.public_key;
+                                    saleHistory.receiver_name = user.username;
+                                    saleHistory.transaction_hash = req.body.transaction_hash;
+                                    saleHistory.history_type = "Sale";
+                                    saleHistory.price = item.price;
+                                    saleHistory.save(function (err, historyObj) {
+                                        if (err) {
+                                            res.status(400).json({
+                                                status: false,
+                                                message:
+                                                    "Request failed",
+                                                errors: err,
+                                            });
+                                            return;
+                                        }
+                                        let transferHistory = new histories();
+                                        // history.item_id = item.item_id;
+                                        transferHistory.collection_id = item.collection_id;
+                                        transferHistory.collection_address = item.collection_address;
+                                        transferHistory.token_id = item.token_id;
+                                        transferHistory.from_address = prev_owner;
+                                        transferHistory.sender_name = prev_owner_name;
+                                        transferHistory.to_address = req.decoded.public_key;
+                                        transferHistory.receiver_name = user.username;
+                                        transferHistory.transaction_hash = req.body.transaction_hash;
+                                        transferHistory.history_type = "Transfer";
+                                        // transferHistory.price = item.price;
+                                        transferHistory.save(function (err, historyObj) {
                                             if (err) {
                                                 res.status(400).json({
                                                     status: false,
-                                                    message: "Request failed",
+                                                    message:
+                                                        "Request failed",
                                                     errors: err,
                                                 });
                                                 return;
                                             }
-                                            item.save(function (err, itemObj) {
+                                            var price = new prices();
+                                            price.item_id = item.item_id;
+                                            price.price = item.price;
+                                            price.user_address = req.decoded.public_key;
+                                            price.save(function (err, priceObj) {
                                                 if (err) {
                                                     res.status(400).json({
                                                         status: false,
-                                                        message:
-                                                            "Request failed",
+                                                        message: "Request failed",
                                                         errors: err,
                                                     });
                                                     return;
                                                 }
-                                                var history = new histories();
-                                                history.item_id = item.item_id;
-                                                history.collection_id =
-                                                    item.collection_id;
-                                                history.from_address =
-                                                    prev_owner;
-                                                history.to_address =
-                                                    req.decoded.public_key;
-                                                history.transaction_hash =
-                                                    req.body.transaction_hash;
-                                                history.history_type =
-                                                    "transfer";
-                                                history.price = item.price;
-                                                history.save(function (
-                                                    err,
-                                                    historyObj
-                                                ) {
-                                                    if (err) {
-                                                        res.status(400).json({
-                                                            status: false,
-                                                            message:
-                                                                "Request failed",
-                                                            errors: err,
-                                                        });
-                                                        return;
-                                                    }
-                                                    var price = new prices();
-                                                    price.item_id =
-                                                        item.item_id;
-                                                    price.price = item.price;
-                                                    price.user_address =
-                                                        req.decoded.public_key;
-                                                    price.save(function (
-                                                        err,
-                                                        priceObj
-                                                    ) {
-                                                        if (err) {
-                                                            res.status(
-                                                                400
-                                                            ).json({
-                                                                status: false,
-                                                                message:
-                                                                    "Request failed",
-                                                                errors: err,
-                                                            });
-                                                            return;
-                                                        }
-                                                        res.json({
-                                                            status: true,
-                                                            message:
-                                                                "Item Transfered successfully",
-                                                            result: itemObj,
-                                                        });
-                                                    });
+                                                res.json({
+                                                    status: true,
+                                                    message:
+                                                        "Item Transfered successfully",
+                                                    result: itemObj,
                                                 });
                                             });
                                         });
-                                    }
-                                }
-                            );
+                                    });
+                                });
+                            });
                         }
-                    }
-                );
-            }
-        });
+                    });
+                }
+            });
+        }
+    });
 };
 
 /*
@@ -1157,54 +1180,60 @@ exports.purchase = function (req, res) {
  */
 exports.history = function (req, res) {
     var page = req.query.page ? req.query.page : "1";
-
     var query;
     if (req.query.type == "item") {
-        query = histories.find({
-            item_id: req.query.item_id,
-        });
+        query = histories.find({collection_id: req.query.collection_id, token_id: req.query.token_id});
     } else if (req.query.type == "collection") {
-        query = histories.find({
-            collection_id: req.query.collection_id,
-        });
+        query = histories.find({collection_id: req.query.collection_id});
     } else if (req.query.type == "profile") {
-        query = histories.find({
-            to_id: req.query.user_id,
-        });
-    } else {
+        query = histories.find({$or: [{from_address: req.query.user_address}, {to_address: req.query.user_address}] });
+    } else if (req.query.type == "history") {
+     
+        // if (hisCount == 1) {
+        //  query=   histories.find(
+        //         {
+        //             $or: [
+        //                 {history_type:  req.query.history_type},
+        //             ]
+        //         }
+        //     )
+        // } else 
+       
+        if(req.query.history_type == ''){
+            query = histories.find();
+        }
+        else{
+            let history_type_list = req.query.history_type.split(',');
+            let hisCount= history_type_list.length;
+            if(hisCount > 1) {
+                history_type_list = history_type_list.map(el => el.trim()); 
+            }
+            query = histories.find(
+                {
+                    $or: [
+                        {history_type: history_type_list},
+                    ]
+                }
+            )
+        }
+    }else{
         query = histories.find();
     }
-
-    if (req.query.filter) {
-        query = query.where("history_type", req.query.filter);
-    }
-
+    // if (req.query.filter) {
+    //     query = query.where("history_type", req.query.filter);
+    // }
     var offset = page == "1" ? 0 : parseInt(page - 1) * 10;
-    query = query.populate({
-        path: "to_id",
-        model: users,
-        select: "_id username first_name last_name profile_image",
-    });
-    query = query.populate({
-        path: "from_id",
-        model: users,
-        select: "_id username first_name last_name profile_image",
-    });
-    query = query.populate({
-        path: "item_id",
-        model: items,
-        select: "_id name thumb price",
-    });
-    query = query.populate({
-        path: "collection_id",
-        model: collections,
-    });
+    // query = query.populate({ path: "to_id", model: users, select: "_id username first_name last_name profile_image" });
+    // query = query.populate({ path: "from_id", model: users, select: "_id username first_name last_name profile_image"});
+    // // query = query.populate({ path: "item_id", model: items, select: "_id name thumb price" });
+    // query = query.populate({ path: "collection_id", model: collections });
     query = query.sort("-created_date");
     var options = {
         page: page,
         offset: offset,
         limit: 10,
     };
+ 
     histories.paginate(query, options).then(function (result) {
         res.json({
             status: true,
@@ -2559,7 +2588,7 @@ exports.view = function (req, res) {
 };
 
 //changing status ti inactive to active
-exports.activateItem = function (req, res) {
+exports.relistItemForSale = function (req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         res.status(400).json({
@@ -2571,7 +2600,7 @@ exports.activateItem = function (req, res) {
     }
     items.findOne(
         {
-            _id: req.body._id,
+            item_id: req.body.item_id,
             current_owner: req.decoded.public_key,
             status: "inactive",
         },
@@ -2594,23 +2623,67 @@ exports.activateItem = function (req, res) {
                         message: "Price must be morethan 0",
                     });
                 } else {
-                    itemObj.price = req.body.price;
-                    itemObj.status = "active";
-                    itemObj.save(function (err, result) {
+                    users.findOne({public_key: req.decoded.public_key, status: "active"}, function(err, user){
                         if (err) {
                             res.json({
                                 status: false,
                                 message: "Request failed",
                                 errors: err,
                             });
-                        } else {
+                        } else if (!user) {
                             res.json({
-                                status: true,
-                                message: "Item activated successfully",
-                                data: result,
+                                status: false,
+                                message: "User not found",
+                            });
+                        } else {
+                            var history = new histories();
+                            // history.item_id = req.body.item_id;
+                            history.collection_id = itemObj.collection_id;
+                            history.collection_address = itemObj.collection_address;
+                            history.token_id = itemObj.token_id;
+                            history.from_address = req.decoded.public_key;
+                            history.sender_name = user.username;
+                            // history.to_address = user.public_key;
+                            // history.transaction_hash = req.body.transaction_hash;
+                            history.price = req.body.price;
+                            history.history_type = "List";
+                            history.save(function (err, historyObj) {
+                                // console.log(historyObj);
+                                var price = new prices();
+                                price.item_id = req.body.item_id;
+                                price.price = req.body.price;
+                                price.user_address = req.decoded.public_key;
+                                price.save(function (err, priceObj) {
+                                    if (err) {
+                                        res.json({
+                                            status: false,
+                                            message: "Request failed",
+                                            errors: err,
+                                        });
+                                    }
+                                    // console.log(priceObj);
+                                    
+                                    itemObj.price = req.body.price;
+                                    itemObj.status = "active";
+                                    itemObj.save(function (err, result) {
+                                        if (err) {
+                                            res.json({
+                                                status: false,
+                                                message: "Request failed",
+                                                errors: err,
+                                            });
+                                        } else {
+                                            res.json({
+                                                status: true,
+                                                message: "Item listed for sales successfully",
+                                                data: result,
+                                            });
+                                        }
+                                    });
+                                }); 
                             });
                         }
-                    });
+                    })
                 }
             }
         }

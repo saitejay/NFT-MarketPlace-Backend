@@ -1,1 +1,0 @@
-exports.defaultProfileCover = "https://res.cloudinary.com/shreewallet/image/upload/v1645101317/artopera/user/cover/iggk03fnmyhuvfttbh6l.jpg";

@@ -15,8 +15,8 @@ var mailer = require("./../../common/controller/mailController");
 var media = require("./../../media/controller/mediaController");
 var cp = require("child_process");
 const itemModel = require("../../item/model/itemModel");
-const { defaultProfileImage } = require("../../../helper/profileImage");
-const { defaultProfileCover } = require("../../../helper/profileCover");
+// const { defaultProfileImage } = require("../../../helper/profileImage");
+// const { defaultProfileCover } = require("../../../helper/profileCover");
 const { json } = require("express");
 const cloudinary = require("cloudinary").v2;
 // const streamifier = require('streamifier')
@@ -237,10 +237,10 @@ registerUser = function (req, res) {
   user.public_key = req.body.public_key ? req.body.public_key : "";
   user.profile_image = req.body.profile_image
     ? req.body.profile_image
-    : defaultProfileImage;
+    : config.profile_image;
   user.profile_cover = req.body.profile_cover
     ? req.body.profile_cover
-    : defaultProfileCover;
+    : config.profile_cover;
   user.bio = req.body.bio ? req.body.bio : "";
   user.facebook_username = req.body.facebook_username
     ? req.body.facebook_username
@@ -958,7 +958,7 @@ exports.update = function (req, res) {
             const prevProfileImage = user.profile_image;
             // console.log(prevProfileImage);
             // console.log(defaultProfileImage);
-            if (prevProfileImage != defaultProfileImage) {
+            if (prevProfileImage != config.profile_image) {
               const tempUrlArray = prevProfileImage.split("/");
               const cloudinaryPublicId1 = tempUrlArray
                 .slice(tempUrlArray.indexOf("artopera"), tempUrlArray.length)
@@ -1004,7 +1004,7 @@ exports.update = function (req, res) {
             const prevCoverImage = user.profile_cover;
             // console.log(prevCoverImage);
             // console.log(defaultProfileCover);
-            if (prevCoverImage != defaultProfileCover) {
+            if (prevCoverImage != config.profile_cover) {
               const tempUrlArray = prevCoverImage.split("/");
               const cloudinaryPublicId2 = tempUrlArray
                 .slice(tempUrlArray.indexOf("artopera"), tempUrlArray.length)

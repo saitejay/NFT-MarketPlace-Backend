@@ -10,10 +10,18 @@ var config = require('./../../../helper/config')
 const Schema = mongoose.Schema;
 
 var historySchema = mongoose.Schema({
-    item_id: { type: Number },
+    // item_id: { type: Number },
     collection_id: { type: Number },
+    collection_address: { type: String },
+    token_id: { type: Number },
     from_address: { type: String },
+    sender_name: {
+        type: String
+    },
     to_address: { type: String },
+    receiver_name: {
+        type: String
+    },
     transaction_hash: {
         type: String
     },
@@ -22,7 +30,7 @@ var historySchema = mongoose.Schema({
     },
     history_type:{
         type: String,
-        enum : ['minted','bids','transfer', 'comission', 'admin_comission']
+        enum : ['Minted', 'List', 'Sale','Transfer', 'Bid']
     },
     is_valid: {
         type:Boolean,

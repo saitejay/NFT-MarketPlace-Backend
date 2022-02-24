@@ -117,7 +117,7 @@ exports.add  = async function(req,res) {
         });
         return;
     }
-    category.status = req.body.status;
+    category.status = req.body.status? req.body.status: 'active';
     category.save(function (err , categoryObj) {
         if (err) {
             res.status(400).json({
@@ -200,7 +200,7 @@ exports.edit  = function(req,res) {
                     return;
                 }
             }
-            category.status = req.body.status;
+            category.status = req.body.status? req.body.status: category.status;
             category.save(function (err , category) {
                 if (err) {
                     res.json({

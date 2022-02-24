@@ -53,26 +53,9 @@ router.post("/addviews", auth, itemController.addViews);
 router.get("/viewslist", optionalauth, itemController.recentlyViewed);
 router.post("/addfavourites", auth, itemController.actionFavourite);
 router.get("/favouriteslist", itemController.listFavourite);
-router.post(
-    "/minting",
-    [check("_id").not().isEmpty(), check("token_id").not().isEmpty(), auth],
-    itemController.mint_token
-);
-router.post(
-    "/publish",
-    [
-        check("_id").not().isEmpty(),
-        check("item_id").not().isEmpty(),
-        check("transaction_hash").not().isEmpty(),
-        auth,
-    ],
-    itemController.publish
-);
-router.post(
-    "/purchase",
-    [check("item_id").not().isEmpty(), auth],
-    itemController.purchase
-);
+router.post("/minting", [check("_id").not().isEmpty(), check("token_id").not().isEmpty(), auth], itemController.mint_token);
+router.post("/publish", [check("_id").not().isEmpty(), check("item_id").not().isEmpty(), auth], itemController.publish);
+router.post("/purchase",[check("item_id").not().isEmpty(), auth], itemController.purchase);
 router.get("/history", itemController.history);
 router.get("/prices", itemController.pricelist);
 router.post(
@@ -114,10 +97,6 @@ router.post(
 router.get("/view/:id", itemController.view);
 router.post("/generateabi", itemController.generateHash);
 router.get("/getabi", itemController.getABI);
-router.post(
-    "/activateitem",
-    [check("_id").not().isEmpty(), check("price").not().isEmpty(), auth],
-    itemController.activateItem
-);
+router.post("/relistitemforsale", [check("item_id").not().isEmpty(), check("price").not().isEmpty(), auth], itemController.relistItemForSale);
 // router.post('/img',itemController.img)
 module.exports = router;

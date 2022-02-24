@@ -11,7 +11,7 @@ const config = {
       port: 27017,
       username: 'ArtOpera',
       password: 'iBP9LeWEUPOXKBe4',
-      name: 'nftmarketplace',
+      name: 'nftmarketplac',
       prefix:'linkwell_'
     },
     mail: {
@@ -35,7 +35,10 @@ const config = {
   
     cloud_name: 'shreewallet', 
     api_key: '253594261126844', 
-    api_secret: 'u3Q5RXtzyCxxxpHWzCoMnwmdHRs' 
+    api_secret: 'u3Q5RXtzyCxxxpHWzCoMnwmdHRs',
+
+    profile_cover: 'https://res.cloudinary.com/shreewallet/image/upload/v1645101317/artopera/user/cover/iggk03fnmyhuvfttbh6l.jpg',
+    profile_image: 'https://res.cloudinary.com/shreewallet/image/upload/v1645171791/artopera/user/profile/profile_vrserb.png'
    };
    
    

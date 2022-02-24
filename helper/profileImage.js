@@ -1,1 +1,0 @@
-exports.defaultProfileImage = "https://res.cloudinary.com/shreewallet/image/upload/v1645171791/artopera/user/profile/profile_vrserb.png";

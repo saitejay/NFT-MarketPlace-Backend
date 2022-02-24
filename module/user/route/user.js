@@ -51,11 +51,8 @@ router.put(
 // router.put('/change', [check('newpassword').not().isEmpty(),check('oldpassword').not().isEmpty(),auth],userController.changepassword)
 
 router.put("/profilesettings", auth, userController.updatesettings);
-
 router.get("/profile", userController.details);
-
 router.post("/chat", auth, userController.getListByIds);
-
 router.get("/adminlist", adminauth, userController.getAdminList);
 router.post("/createuser", adminauth, userController.createUser);
 router.post("/updateuser", adminauth, userController.updateUser);

@@ -22,7 +22,7 @@ const collections = require('../../collection/model/collectionModel');
 * This is the function which used to add auction in database
 */
 exports.test = function(req, res) {
-    res.send("working");
+    res.send("working...!");
 }
 
 exports.add = function(req,res) {
@@ -202,7 +202,7 @@ exports.placeBid = function(req,res) {
         } else if(!bidObj) {
             var bid = new bidModel();
             auctionModel.findOne({auction_id: req.body.auction_id, is_auction_live: true, auction_owner_address : { $ne: req.decoded.public_key } }, function(err, auctionObj){
-                console.log(auctionObj);
+                // console.log(auctionObj);
                 if (err) {
                     res.status(401).json({
                         status: false,
@@ -266,10 +266,30 @@ exports.placeBid = function(req,res) {
                                                             message: "Item not found"
                                                         });
                                                     } else {
-                                                        res.status(200).json({
-                                                            status: true,
-                                                            message: "Bid Placed successfully",
-                                                            result: bidObj
+                                                        let history = new historyModel();
+                                                        history.collection_id = item.collection_id;
+                                                        history.collection_address = item.collection_address;
+                                                        history.token_id = item.token_id;
+                                                        history.from_address = req.decoded.public_key;
+                                                        history.sender_name = userObj.username;
+                                                        // history.to_address = auctionObj1.auction_owner_address;
+                                                        // history.transaction_hash = req.body.transaction_hash;
+                                                        history.price = req.body.bid_amount;
+                                                        history.history_type = "Bid";
+                                                        history.save(function(err, historyObj) {
+                                                            if (err) {
+                                                                res.status(401).json({
+                                                                    status: false,
+                                                                    message: "Request failed",
+                                                                    errors:err
+                                                                });
+                                                                return;
+                                                            }
+                                                            res.status(200).json({
+                                                                status: true,
+                                                                message: "Bid Placed successfully",
+                                                                result: bidObj
+                                                            });
                                                         });
                                                     }
                                                 });
