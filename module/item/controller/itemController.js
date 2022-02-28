@@ -2689,3 +2689,92 @@ exports.relistItemForSale = function (req, res) {
         }
     );
 };
+
+//Gifting an item
+exports.giftingNft = function (req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({
+            status: false,
+            message: "Request failed",
+            errors: errors.array(),
+        });
+        return;
+    }
+    items.findOne({current_owner: req.decoded.public_key, is_on_auction: false}, function(err, itemObj){
+        if (err) {
+            res.status(400).json({
+                status: false,
+                message: "Request failed",
+                errors: err
+            });
+            return;
+        } else if(!itemObj){
+            res.status(404).json({
+                status: false,
+                message: "Item not found"
+            })
+        }else{
+            const prevOwnerName = itemObj.current_owner_name
+            users.findOne({public_key: req.body.receiver_address}, function (err, userObj) {
+                if (err) {
+                    res.status(400).json({
+                        status: false,
+                        message: "Request failed",
+                        errors: err
+                    });
+                    return;
+                } else if(!userObj){
+                    res.status(404).json({
+                        status: false,
+                        message: "receiver not found"
+                    })
+                } else{
+                    itemObj.current_owner = req.body.receiver_address;
+                    itemObj.owner_image = userObj.profile_image;
+                    itemObj.current_owner_name = userObj.username;
+                    itemObj.status = "inactive";
+                    itemObj.save(function(err, itemResult) {
+                        if (err) {
+                            res.status(400).json({
+                                status: false,
+                                message: "Request failed",
+                                errors: err
+                            });
+                            return;
+                        }else {
+                            let transferHistory = new histories();
+                            transferHistory.collection_id = itemObj.collection_id;
+                            transferHistory.collection_address = itemObj.collection_address;
+                            transferHistory.token_id = itemObj.token_id;
+                            transferHistory.from_address = req.decoded.public_key;
+                            transferHistory.sender_name = prevOwnerName;
+                            transferHistory.to_address = req.body.receiver_address;
+                            transferHistory.receiver_name = userObj.username;
+                            transferHistory.transaction_hash = req.body.transaction_hash;
+                            transferHistory.history_type = "Transfer";
+                            // transferHistory.price = item.price;
+                            transferHistory.save(function (err, historyResult) {
+                                if (err) {
+                                    res.status(400).json({
+                                        status: false,
+                                        message: "Request failed",
+                                        errors: err,
+                                    });
+                                    return;
+                                }else{
+                                    res.json({
+                                        status: true,
+                                        message: "Successfully transfered",
+                                        itemData: itemResult,
+                                        historyData: historyResult  
+                                    })
+                                }
+                            })
+                        }
+                    });
+                }
+            })
+        }
+    })
+}

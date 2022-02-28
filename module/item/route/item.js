@@ -98,5 +98,6 @@ router.get("/view/:id", itemController.view);
 router.post("/generateabi", itemController.generateHash);
 router.get("/getabi", itemController.getABI);
 router.post("/relistitemforsale", [check("item_id").not().isEmpty(), check("price").not().isEmpty(), auth], itemController.relistItemForSale);
+router.post("/gift", [check("item_id").not().isEmpty(), check("receiver_address").not().isEmpty(),check("transaction_hash").not().isEmpty(), auth], itemController.giftingNft);
 // router.post('/img',itemController.img)
 module.exports = router;
