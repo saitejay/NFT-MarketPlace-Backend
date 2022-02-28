@@ -365,10 +365,32 @@ exports.placeBid = function(req,res) {
                                                         message: "Item not found"
                                                     });
                                                 } else {
-                                                    res.status(200).json({
-                                                        status: true,
-                                                        message: "Bid Placed successfully",
-                                                        result: bidObj
+                                                    userModel.findOne({public_key: req.decoded.public_key, status: "active"}, function(err, userObj){
+                                                        let history = new historyModel();
+                                                        history.collection_id = item.collection_id;
+                                                        history.collection_address = item.collection_address;
+                                                        history.token_id = item.token_id;
+                                                        history.from_address = req.decoded.public_key;
+                                                        history.sender_name = userObj.username;
+                                                        // history.to_address = auctionObj1.auction_owner_address;
+                                                        // history.transaction_hash = req.body.transaction_hash;
+                                                        history.price = req.body.bid_amount;
+                                                        history.history_type = "Bid";
+                                                        history.save(function(err, historyObj) {
+                                                            if (err) {
+                                                                res.status(401).json({
+                                                                    status: false,
+                                                                    message: "Request failed",
+                                                                    errors:err
+                                                                });
+                                                                return;
+                                                            }
+                                                            res.status(200).json({
+                                                                status: true,
+                                                                message: "Bid Placed successfully",
+                                                                result: bidObj
+                                                            });
+                                                        });
                                                     });
                                                 }
                                             });
@@ -606,6 +628,7 @@ exports.paybackOnAuction = function (req, res) {
                             return;
                         } else {
                             let prev_owner = item.current_owner;
+                            let prev_owner_name = item.current_owner_name;
                             userModel.findOne({public_key: auctionObj.highest_bid_address}, function(err, user){
                                 if (err) {
                                     res.status(400).json({
@@ -670,28 +693,41 @@ exports.paybackOnAuction = function (req, res) {
                                                         });
                                                         return;
                                                     }
-                                                    var history = new historyModel();
-                                                    history.item_id = item.item_id;
-                                                    history.collection_id = item.collection_id;
-                                                    history.from_address = prev_owner;
-                                                    history.to_address = req.decoded.public_key
-                                                    history.transaction_hash = req.body.transaction_hash
-                                                    history.history_type = "transfer";
-                                                    history.price = bidObj.bid_amount;
-                                                    history.save(function (err ,historyObj) {
+                                                    let saleHistory = new historyModel();
+                                                    // history.item_id = item.item_id;
+                                                    saleHistory.collection_id = item.collection_id;
+                                                    saleHistory.collection_address = item.collection_address;
+                                                    saleHistory.token_id = item.token_id;
+                                                    saleHistory.from_address = prev_owner;
+                                                    saleHistory.sender_name = prev_owner_name;
+                                                    saleHistory.to_address = req.decoded.public_key;
+                                                    saleHistory.receiver_name = user.username;
+                                                    saleHistory.transaction_hash = req.body.transaction_hash;
+                                                    saleHistory.history_type = "Sale";
+                                                    saleHistory.price = bidObj.bid_amount;
+                                                    saleHistory.save(function (err, historyObj) {
                                                         if (err) {
                                                             res.status(400).json({
                                                                 status: false,
-                                                                message: "Request failed",
-                                                                errors:err
+                                                                message:
+                                                                    "Request failed",
+                                                                errors: err,
                                                             });
                                                             return;
                                                         }
-                                                        var price = new prices();
-                                                        price.item_id = item.item_id;
-                                                        price.price = bidObj.bid_amount;
-                                                        price.user_address = req.decoded.public_key;
-                                                        price.save(function (err ,priceObj) {
+                                                        var transferHistory = new historyModel();
+                                                        // transferHistory.item_id = item.item_id;
+                                                        transferHistory.collection_id = item.collection_id;
+                                                        transferHistory.collection_address = item.collection_address;
+                                                        transferHistory.token_id = itemObj.token_id;
+                                                        transferHistory.from_address = prev_owner;
+                                                        transferHistory.sender_name = prev_owner_name;
+                                                        transferHistory.to_address = req.decoded.public_key
+                                                        transferHistory.receiver_name = user.username;  
+                                                        transferHistory.transaction_hash = req.body.transaction_hash
+                                                        transferHistory.history_type = "Transfer";
+                                                        transferHistory.price = bidObj.bid_amount;
+                                                        transferHistory.save(function (err ,historyObj) {
                                                             if (err) {
                                                                 res.status(400).json({
                                                                     status: false,
@@ -700,10 +736,24 @@ exports.paybackOnAuction = function (req, res) {
                                                                 });
                                                                 return;
                                                             }
-                                                            res.json({
-                                                                status: true,
-                                                                message: "Auction completed and new owner repaid successfully",
-                                                                result: itemObj
+                                                            var price = new prices();
+                                                            price.item_id = item.item_id;
+                                                            price.price = bidObj.bid_amount;
+                                                            price.user_address = req.decoded.public_key;
+                                                            price.save(function (err ,priceObj) {
+                                                                if (err) {
+                                                                    res.status(400).json({
+                                                                        status: false,
+                                                                        message: "Request failed",
+                                                                        errors:err
+                                                                    });
+                                                                    return;
+                                                                }
+                                                                res.json({
+                                                                    status: true,
+                                                                    message: "Auction completed and new owner repaid successfully",
+                                                                    result: itemObj
+                                                                });
                                                             });
                                                         });
                                                     });
