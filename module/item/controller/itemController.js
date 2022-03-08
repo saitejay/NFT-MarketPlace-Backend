@@ -234,205 +234,251 @@ exports.add = async function (req, res) {
  */
 
 exports.update = function (req, res) {
-    const errors = validationResult(req.body);
-    if (!errors.isEmpty()) {
+  const errors = validationResult(req.body);
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      status: false,
+      message: "Request failed",
+      errors: errors.array(),
+    });
+    return;
+  }
+  // console.log("item id ",req.body.item_id);
+  // console.log("creator_address ",req.decoded.public_key);
+  items.findOne(
+    {
+      _id: req.body._id,
+      creator_address: req.decoded.public_key,
+      status: "created",
+    },
+    async function (err, item) {
+      if (err) {
         res.status(400).json({
-            status: false,
-            message: "Request failed",
-            errors: errors.array(),
+          status: false,
+          message: "Request failed!",
+          errors: err,
         });
         return;
-    }
-    // console.log("item id ",req.body.item_id);
-    // console.log("creator_address ",req.decoded.public_key);
-    items.findOne(
-        {
-            _id: req.body._id,
-            creator_address: req.decoded.public_key,
-            status: "created",
-        },
-        async function (err, item) {
-            if (err) {
-                res.status(400).json({
-                    status: false,
-                    message: "Request failed!",
-                    errors: err,
+      } else if (!item) {
+        res.status(404).json({
+          status: false,
+          message: "Item not found",
+        });
+      } else {
+        if (!req.body.stats) {
+          for (let i = 0; i < item.stats.length; i++) {
+            if (req.body.stats[i]) {
+              // const element = array[i];
+              await items.findOneAndUpdate(
+                { _id: req.body._id },
+                { $pull: { stats: { _id: item.stats[i]._id } } },
+                { safe: true, multi: false }
+              );
+              return res
+                .status(200)
+                .json({ message: "Stats Deleted Successfully" });
+            }
+          }
+        } else if (!req.body.attributes) {
+          for (let i = 0; i < item.attributes.length; i++) {
+            if (req.body.attributes[i]) {
+              // const element = array[i];
+              await items.findOneAndUpdate(
+                { _id: req.body._id },
+                { $pull: { attributes: { _id: item.attributes[i]._id } } },
+                { safe: true, multi: false }
+              );
+              return res
+                .status(200)
+                .json({ message: "Attributes Deleted Successfully" });
+            }
+          }
+        } else if (!req.body.levels) {
+          for (let i = 0; i < item.levels.length; i++) {
+            if (req.body.levels[i]) {
+              // const element = array[i];
+              await items.findOneAndUpdate(
+                { _id: req.body._id },
+                { $pull: { levels: { _id: item.levels[i]._id } } },
+                { safe: true, multi: false }
+              );
+              return res
+                .status(200)
+                .json({ message: "Levels Deleted Successfully" });
+            }
+          }
+        } else {
+          // console.log("2");
+          // console.log(req.body);
+          if (req.files) {
+            // console.log(req.files);
+            if (req.files.media != undefined) {
+              // const fileStr1 = req.body.media;
+              //   console.log(req.files.media[0]);
+              const prevMedia = item.media;
+              //   console.log(prevMedia);
+              const tempMediaArray = prevMedia.split("/");
+              const cloudinaryPublicId1 = tempMediaArray
+                .slice(
+                  tempMediaArray.indexOf("artoperatesting"),
+                  tempMediaArray.length
+                )
+                .join("/")
+                .split(".")[0];
+              //   console.log(cloudinaryPublicId1);
+              try {
+                let deleteResponse1;
+                if (item.media_type == "video") {
+                  deleteResponse1 = await cloudinary.uploader.destroy(
+                    cloudinaryPublicId1,
+                    {
+                      resource_type: "video",
+                    }
+                  );
+                } else if (item.media_type == "image") {
+                  deleteResponse1 = await cloudinary.uploader.destroy(
+                    cloudinaryPublicId1
+                  );
+                } else {
+                  deleteResponse1 = await cloudinary.uploader.destroy(
+                    cloudinaryPublicId1,
+                    {
+                      resource_type: "auto",
+                    }
+                  );
+                }
+                // console.log(deleteResponse1);
+              } catch (error) {
+                res.status(401).json({
+                  status: false,
+                  message: "Previous NFT item media delete failed.",
+                  error: error,
                 });
                 return;
-            } else if (!item) {
-                res.status(404).json({
-                    status: false,
-                    message: "Item not found",
-                });
-            }
-            //   console.log(req.body);
-            if (req.files) {
-                // console.log(req.files);
-                if (req.files.media != undefined) {
-                    // const fileStr1 = req.body.media;
-                    //   console.log(req.files.media[0]);
-                    const prevMedia = item.media;
-                    //   console.log(prevMedia);
-                    const tempMediaArray = prevMedia.split("/");
-                    const cloudinaryPublicId1 = tempMediaArray
-                        .slice(
-                            tempMediaArray.indexOf("artopera"),
-                            tempMediaArray.length
-                        )
-                        .join("/")
-                        .split(".")[0];
-                    //   console.log(cloudinaryPublicId1);
-                    try {
-                        let deleteResponse1;
-                        if (item.media_type == "video") {
-                            deleteResponse1 = await cloudinary.uploader.destroy(
-                                cloudinaryPublicId1,
-                                {
-                                    resource_type: "video",
-                                }
-                            );
-                        } else if (item.media_type == "image") {
-                            deleteResponse1 = await cloudinary.uploader.destroy(
-                                cloudinaryPublicId1
-                            );
-                        } else {
-                            deleteResponse1 = await cloudinary.uploader.destroy(
-                                cloudinaryPublicId1,
-                                {
-                                    resource_type: "auto",
-                                }
-                            );
-                        }
-                        // console.log(deleteResponse1);
-                    } catch (error) {
-                        res.status(401).json({
-                            status: false,
-                            message: "Previous NFT item media delete failed.",
-                            error: error,
-                        });
-                        return;
-                    }
+              }
 
-                    try {
-                        let path = "/artopera/item/media/";
-                        let uploadResponse1;
-                        if (/image/.test(req.files.media[0].mimetype)) {
-                            uploadResponse1 = await uploadImages(
-                                req.files.media[0].buffer,
-                                path
-                            );
-                        } else if (
-                            /video/.test(req.files.media[0].mimetype) ||
-                            /audio/.test(req.files.media[0].mimetype)
-                        ) {
-                            uploadResponse1 = await uploadStreamableFiles(
-                                req.files.media[0].buffer,
-                                path
-                            );
-                        } else {
-                            uploadResponse1 = await uploadDocumentFiles(
-                                req.files.media[0].buffer,
-                                path
-                            );
-                        }
-                        // console.log(uploadResponse1);
-                        item.media = uploadResponse1.secure_url;
-                        // item.item_hash = req.body.item_hash;
-                    } catch (error) {
-                        res.status(401).json({
-                            status: false,
-                            message: "New NFT item media upload failed.",
-                            error: error,
-                        });
-                        return;
-                    }
-                }
-                if (req.files.thumb != undefined) {
-                    //   console.log(req.files.thumb[0]);
-                    const prevThumb = item.thumb;
-                    //   console.log(prevThumb);
-                    const tempThumbArray = prevThumb.split("/");
-                    const cloudinaryPublicId2 = tempThumbArray
-                        .slice(
-                            tempThumbArray.indexOf("artopera"),
-                            tempThumbArray.length
-                        )
-                        .join("/")
-                        .split(".")[0];
-                    //   console.log(cloudinaryPublicId2);
-                    try {
-                        let deleteResponse2 = await cloudinary.uploader.destroy(
-                            cloudinaryPublicId2
-                        );
-                        // console.log(deleteResponse2);
-                    } catch (error) {
-                        res.status(401).json({
-                            status: false,
-                            message: "Previous NFT item thumb delete failed.",
-                            error: error,
-                        });
-                        return;
-                    }
-
-                    try {
-                        let path = "/artopera/item/thumb/";
-                        let uploadResponse2 = await uploadImages(
-                            req.files.thumb[0].buffer,
-                            path
-                        );
-                        // console.log(uploadResponse2);
-                        item.thumb = uploadResponse2.secure_url;
-                    } catch (err) {
-                        res.status(401).json({
-                            status: false,
-                            message: "New NFT item thumb upload failed.",
-                            error: error,
-                        });
-                        return;
-                    }
-                }
-            }
-            item.name = req.body.name ? req.body.name : item.name;
-            item.description = req.body.description
-                ? req.body.description
-                : item.description;
-            item.price = req.body.price ? req.body.price : item.price;
-            item.item_hash = req.body.item_hash
-                ? req.body.item_hash
-                : item.item_hash;
-            item.external_link = req.body.external_link
-                ? req.body.external_link
-                : item.external_link;
-            item.unlock_content_url = req.body.unlock_content_url
-                ? req.body.unlock_content_url
-                : item.unlock_content_url;
-            item.attributes = req.body.attributes
-                ? req.body.attributes
-                : item.attributes;
-            item.levels = req.body.levels ? req.body.levels : item.levels;
-            item.stats = req.body.stats ? req.body.stats : item.stats;
-            item.category_id = req.body.category_id
-                ? req.body.category_id
-                : item.category_id;
-            item.save(function (err, itemObj) {
-                if (err) {
-                    res.status(401).json({
-                        status: false,
-                        message: "Request failed",
-                        errors: err,
-                    });
-                    return;
+              try {
+                let path = "/artoperatesting/item/media/";
+                let uploadResponse1;
+                if (/image/.test(req.files.media[0].mimetype)) {
+                  uploadResponse1 = await uploadImages(
+                    req.files.media[0].buffer,
+                    path
+                  );
+                } else if (
+                  /video/.test(req.files.media[0].mimetype) ||
+                  /audio/.test(req.files.media[0].mimetype)
+                ) {
+                  uploadResponse1 = await uploadStreamableFiles(
+                    req.files.media[0].buffer,
+                    path
+                  );
                 } else {
-                    res.json({
-                        status: true,
-                        message: "Item updated successfully",
-                        result: itemObj,
-                    });
+                  uploadResponse1 = await uploadDocumentFiles(
+                    req.files.media[0].buffer,
+                    path
+                  );
                 }
-            });
+                // console.log(uploadResponse1);
+                item.media = uploadResponse1.secure_url;
+                // item.item_hash = req.body.item_hash;
+              } catch (error) {
+                res.status(401).json({
+                  status: false,
+                  message: "New NFT item media upload failed.",
+                  error: error,
+                });
+                return;
+              }
+            }
+            if (req.files.thumb != undefined) {
+              //   console.log(req.files.thumb[0]);
+              const prevThumb = item.thumb;
+              //   console.log(prevThumb);
+              const tempThumbArray = prevThumb.split("/");
+              const cloudinaryPublicId2 = tempThumbArray
+                .slice(
+                  tempThumbArray.indexOf("artoperatesting"),
+                  tempThumbArray.length
+                )
+                .join("/")
+                .split(".")[0];
+              //   console.log(cloudinaryPublicId2);
+              try {
+                let deleteResponse2 = await cloudinary.uploader.destroy(
+                  cloudinaryPublicId2
+                );
+                // console.log(deleteResponse2);
+              } catch (error) {
+                res.status(401).json({
+                  status: false,
+                  message: "Previous NFT item thumb delete failed.",
+                  error: error,
+                });
+                return;
+              }
+              try {
+                let path = "/artoperatesting/item/thumb/";
+                let uploadResponse2 = await uploadImages(
+                  req.files.thumb[0].buffer,
+                  path
+                );
+                // console.log(uploadResponse2);
+                item.thumb = uploadResponse2.secure_url;
+              } catch (err) {
+                res.status(401).json({
+                  status: false,
+                  message: "New NFT item thumb upload failed.",
+                  error: error,
+                });
+                return;
+              }
+            }
+          }
+          item.name = req.body.name ? req.body.name : item.name;
+          item.description = req.body.description
+            ? req.body.description
+            : item.description;
+          item.price = req.body.price ? req.body.price : item.price;
+          item.item_hash = req.body.item_hash
+            ? req.body.item_hash
+            : item.item_hash;
+          item.external_link = req.body.external_link
+            ? req.body.external_link
+            : item.external_link;
+          item.unlock_content_url = req.body.unlock_content_url
+            ? req.body.unlock_content_url
+            : item.unlock_content_url;
+          item.attributes = req.body.attributes
+            ? req.body.attributes
+            : item.attributes;
+          item.levels = req.body.levels ? req.body.levels : item.levels;
+          item.stats = req.body.stats ? req.body.stats : item.stats;
+          item.category_id = req.body.category_id
+            ? req.body.category_id
+            : item.category_id;
+          item.save(function (err, itemObj) {
+            if (err) {
+              res.status(401).json({
+                status: false,
+                message: "Request failed",
+                errors: err,
+              });
+              return;
+            } else {
+              res.json({
+                status: true,
+                message: "Item updated successfully",
+                result: itemObj,
+              });
+            }
+          });
         }
-    );
+      }
+    }
+  );
 };
+
 
 /*
  * This is the function which used to delete item in database
