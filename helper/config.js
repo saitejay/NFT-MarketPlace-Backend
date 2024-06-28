@@ -7,12 +7,12 @@ const config = {
       port: 5000
     },
     db: {
-      host: 'cluster0.ll6t4.mongodb.net',
-      port: 27017,
-      username: 'ArtOpera',
-      password: 'iBP9LeWEUPOXKBe4',
-      name: 'nftmarketplac',
-      prefix:'linkwell_'
+      host: "cluster0.ni99lik.mongodb.net",
+    port: 27017,
+    username: "admin",
+    password: "123",
+    name: "nftmarketplacetest",
+    prefix: "linkwell_",
     },
     mail: {
       type:"",
