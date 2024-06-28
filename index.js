@@ -53,7 +53,7 @@ try {
       config.db.username +
       ":" +
       config.db.password +
-      "@cluster0.ll6t4.mongodb.net/" +
+      "@cluster0.ni99lik.mongodb.net/" +
       config.db.name,
     {
       keepAlive: true,
